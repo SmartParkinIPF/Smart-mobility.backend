@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { UserService } from "../../domain/services/UserServices";
+import { UserService } from "../../domain/services/User.Service";
 import {
   loginSchema,
   registerSchema,
@@ -33,6 +33,7 @@ export class AuthController {
   logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = logoutSchema.parse(req.body);
+      console.log(refreshToken);
       await this.userService.logout(refreshToken);
       res.status(200).json({ message: "Sesion cerrada" });
     } catch (err) {

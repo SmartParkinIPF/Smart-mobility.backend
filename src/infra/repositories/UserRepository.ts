@@ -110,12 +110,15 @@ export class UsersRepository implements IUserRepository {
   }
 
   async updateRole(targetUserId: string, role: Rol): Promise<void> {
-    const { error } = await supabaseDB
+    const { data, error } = await supabaseDB
       .from("usuarios")
       .update({ role })
-      .eq("id", targetUserId);
+      .eq("id", targetUserId)
+      .select("id, role")
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) throw new Error("No se actualizo ningun usuario (id inexistente)");
   }
 
   async delete(userId: string): Promise<void> {

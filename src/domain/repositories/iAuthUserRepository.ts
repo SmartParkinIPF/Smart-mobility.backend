@@ -11,7 +11,7 @@ export type AuthUserProfile = {
 
 export interface IAuthUserRepository {
   create(authUser: AuthUser): Promise<User["id"]>;
-  signIn(email: string, password: string): Promise<User["id"]>;
+  signIn(email: string, password: string): Promise<String>;
   signOut(refreshToken: string): Promise<void>;
   findByEmail(email: string): Promise<AuthUserProfile | null>;
   delete(userId: string): Promise<void>;

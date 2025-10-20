@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { AuthController } from "../controllers/Authcontrollers";
-import { UserService } from "../../domain/services/UserServices";
+import { AuthController } from "../controllers/Auth.Controller";
+import { UserService } from "../../domain/services/User.Service";
 import { UsersRepository } from "../../infra/repositories/UserRepository";
 import { AuthUserRepository } from "../../infra/repositories/AuthUserRepository";
 

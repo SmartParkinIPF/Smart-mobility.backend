@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { MapController } from "../controllers/MapControllers";
-import { MapMarkerService } from "../../domain/services/MapMarkerService";
+import { MapController } from "../controllers/Map.Controller";
+import { MapMarkerService } from "../../domain/services/MapMarker.Service";
 import { MapMarkerSupabaseRepository } from "../../infra/repositories/MapMarkerRepository";
 
 const router = Router();

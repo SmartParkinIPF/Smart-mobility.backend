@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { UsersController } from "../controllers/UsersController";
-import { RoleService } from "../../domain/services/RoleService";
+import { UsersController } from "../controllers/Users.Controller";
+import { RoleService } from "../../domain/services/Role.Service";
 import { UsersRepository } from "../../infra/repositories/UserRepository";
 import { AuthUserRepository } from "../../infra/repositories/AuthUserRepository";
-import { UserService } from "../../domain/services/UserServices";
+import { UserService } from "../../domain/services/User.Service";
 
 const router = Router();
 const usersRepository = new UsersRepository();

@@ -55,7 +55,8 @@ export class AuthUserRepository implements IAuthUserRepository {
     if (error || !user || !session)
       throw error ?? new Error("Credenciales invalidas");
 
-    return user.id;
+    console.log(session);
+    return session?.refresh_token;
   }
 
   async signOut(refreshToken: string): Promise<void> {

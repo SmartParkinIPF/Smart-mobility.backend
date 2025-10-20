@@ -66,15 +66,18 @@ export class UserService {
     const user = await this.users.findByEmail(normalizedEmail);
     if (!user) throw new AppError("No existe este email", 401);
 
-    await this.authUsers.signIn(normalizedEmail, data.password);
+    const refreshtoken = await this.authUsers.signIn(
+      normalizedEmail,
+      data.password
+    );
 
     const token = this.signJWT(user.id);
-    return { user: this.toPublic(user), token };
+    console.log({ user: this.toPublic(user), token, refreshtoken });
+    return { user: this.toPublic(user), token, refreshtoken };
   }
 
   async logout(refreshToken: string) {
-    if (!refreshToken)
-      throw new AppError("Token de sesion requerido", 400);
+    if (!refreshToken) throw new AppError("Token de sesion requerido", 400);
 
     await this.authUsers.signOut(refreshToken);
   }

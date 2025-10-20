@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { MapMarkerService } from "../../domain/services/MapMarkerService";
+import { MapMarkerService } from "../../domain/services/MapMarker.Service";
 import { createMarkerSchema } from "../../infra/validators/mapMarker.validator";
 import { AppError } from "../../core/errors/AppError";
 

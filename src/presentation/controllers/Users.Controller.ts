@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { RoleService } from "../../domain/services/RoleService";
-import { UserService } from "../../domain/services/UserServices";
+import { RoleService } from "../../domain/services/Role.Service";
+import { UserService } from "../../domain/services/User.Service";
 import { assignRoleSchema } from "../../infra/validators/role.validator";
 import {
   updateUserSchema,
@@ -29,17 +29,13 @@ export class UsersController {
     } catch (err) {
       if ((err as any)?.issues)
         return next(
-          new AppError("Validación fallida", 400, (err as any).issues)
+          new AppError("Validaciï¿½n fallida", 400, (err as any).issues)
         );
       next(err);
     }
   };
 
-  updateProfile = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const targetUserId = req.params.userId;
       const parsed = updateUserSchema.parse(req.body);
@@ -58,7 +54,7 @@ export class UsersController {
     } catch (err) {
       if ((err as any)?.issues)
         return next(
-          new AppError("Validación fallida", 400, (err as any).issues)
+          new AppError("Validaciï¿½n fallida", 400, (err as any).issues)
         );
       next(err);
     }
@@ -74,7 +70,7 @@ export class UsersController {
     } catch (err) {
       if ((err as any)?.issues)
         return next(
-          new AppError("Validación fallida", 400, (err as any).issues)
+          new AppError("Validaciï¿½n fallida", 400, (err as any).issues)
         );
       next(err);
     }

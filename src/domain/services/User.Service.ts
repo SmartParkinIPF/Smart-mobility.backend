@@ -10,6 +10,7 @@ import { IAuthUserRepository } from "../repositories/iAuthUserRepository";
 import { AuthUser } from "../entities/AuthUser";
 import { User } from "../entities/User";
 import type { Rol } from "../types/rolesType";
+import { JwtValidator } from "../../presentation/routes/auth.routes";
 
 const USER_SYNC_MAX_RETRIES = 5;
 const USER_SYNC_INTERVAL_MS = 200;
@@ -57,29 +58,22 @@ export class UserService {
       finalUser = (await this.users.findById(synced.id)) ?? synced;
     }
 
-    const token = this.signJWT(finalUser.id);
-    return { user: this.toPublic(finalUser), token };
+    return { user: this.toPublic(finalUser) };
   }
 
   async login(data: LoginDTO) {
     const normalizedEmail = data.email.toLowerCase();
-    const user = await this.users.findByEmail(normalizedEmail);
-    if (!user) throw new AppError("No existe este email", 401);
+    const user1 = await this.users.findByEmail(normalizedEmail);
+    if (!user1) throw new AppError("No existe este email", 401);
 
-    const refreshtoken = await this.authUsers.signIn(
-      normalizedEmail,
-      data.password
-    );
+    console.log(data);
+    const user = await this.authUsers.signIn(normalizedEmail, data.password);
 
-    const token = this.signJWT(user.id);
-    console.log({ user: this.toPublic(user), token, refreshtoken });
-    return { user: this.toPublic(user), token, refreshtoken };
-  }
+    const token = await JwtValidator.createJwt(user);
 
-  async logout(refreshToken: string) {
-    if (!refreshToken) throw new AppError("Token de sesion requerido", 400);
-
-    await this.authUsers.signOut(refreshToken);
+    console.log(token);
+    // console.log({ session });
+    return { user: this.toPublic(user1), token };
   }
 
   async updateProfile(

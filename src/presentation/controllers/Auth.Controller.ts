@@ -6,6 +6,7 @@ import {
   logoutSchema,
 } from "../../infra/validators/user.validator";
 import { AppError } from "../../core/errors/AppError";
+import { email } from "zod";
 
 export class AuthController {
   constructor(private readonly userService: UserService) {}
@@ -23,26 +24,44 @@ export class AuthController {
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = loginSchema.parse(req.body);
-      const result = await this.userService.login(parsed);
-      res.json(result);
+      const { token } = await this.userService.login(parsed);
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 3600000,
+      });
+      res.status(201).json({ message: "Session iniciada correctamente" });
     } catch (err) {
       next(this.toAppError(err));
     }
   };
 
-  logout = async (req: Request, res: Response, next: NextFunction) => {
+  session = async (req: Request, res: Response) => {
     try {
-      const { refreshToken } = logoutSchema.parse(req.body);
-      console.log(refreshToken);
-      await this.userService.logout(refreshToken);
+      const authUser = (req as any).authUser;
+      const authToken = (req as any).authToken;
+
+      if (!authToken || !authUser) {
+        return res.status(401).json({ message: "No hay session activa" });
+      }
+
+      return res.status(201).json({
+        token: authToken,
+        user: {
+          nombre: authUser.nombre,
+          email: authUser.email,
+          rol_id: authUser.rol,
+        },
+      });
+    } catch (error) {}
+  };
+  logout = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.clearCookie("token");
       res.status(200).json({ message: "Sesion cerrada" });
     } catch (err) {
       next(this.toAppError(err));
     }
-  };
-
-  hola = async (_req: Request, res: Response) => {
-    res.json({ message: "hola" });
   };
 
   private toAppError(err: unknown) {

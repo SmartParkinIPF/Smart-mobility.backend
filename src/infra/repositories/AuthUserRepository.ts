@@ -42,7 +42,7 @@ export class AuthUserRepository implements IAuthUserRepository {
     return created;
   }
 
-  async signIn(email: string, password: string): Promise<User["id"]> {
+  async signIn(email: string, password: string): Promise<string> {
     const normalized = email.toLowerCase();
     const {
       data: { user, session },
@@ -55,13 +55,7 @@ export class AuthUserRepository implements IAuthUserRepository {
     if (error || !user || !session)
       throw error ?? new Error("Credenciales invalidas");
 
-    console.log(session);
-    return session?.refresh_token;
-  }
-
-  async signOut(refreshToken: string): Promise<void> {
-    const { error } = await supabaseServiceRol.auth.admin.signOut(refreshToken);
-    if (error) throw error;
+    return user.id;
   }
 
   async findByEmail(email: string): Promise<AuthUserProfile | null> {
@@ -75,6 +69,20 @@ export class AuthUserRepository implements IAuthUserRepository {
 
     const users = data?.users ?? [];
     const user = users.find((u) => u.email?.toLowerCase() === normalized);
+    if (!user) return null;
+
+    return toProfile(user);
+  }
+  async findById(id: string): Promise<AuthUserProfile | null> {
+    const { data, error } = await supabaseServiceRol.auth.admin.listUsers({
+      page: 1,
+      perPage: 100,
+    });
+
+    if (error) throw error;
+
+    const users = data?.users ?? [];
+    const user = users.find((u) => u.id.toLowerCase() === id);
     if (!user) return null;
 
     return toProfile(user);

@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const ENV = {
-  PORT: parseInt(process.env.PORT || "4000", 10),
+  PORT: parseInt(process.env.PORT || "4001"),
   HOST: process.env.HOST || "0.0.0.0",
   JWT_SECRET: process.env.JWT_SECRET || "hs<ifñ<lfj<ffs<uhlk<sgb",
   SUPABASE_URL:

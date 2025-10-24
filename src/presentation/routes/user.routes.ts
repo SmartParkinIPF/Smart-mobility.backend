@@ -4,6 +4,9 @@ import { RoleService } from "../../domain/services/Role.Service";
 import { UsersRepository } from "../../infra/repositories/UserRepository";
 import { AuthUserRepository } from "../../infra/repositories/AuthUserRepository";
 import { UserService } from "../../domain/services/User.Service";
+import { ValidatorJwt } from "../../core/middleware/validateJwt";
+
+const JwtValidator = new ValidatorJwt();
 
 const router = Router();
 const usersRepository = new UsersRepository();
@@ -13,8 +16,12 @@ const controller = new UsersController(
   new UserService(usersRepository, authUserRepository)
 );
 
-router.patch("/:userId/profile", controller.updateProfile);
-router.patch("/:userId/role", controller.assignRole);
-router.delete("/:userId", controller.delete);
+router.patch(
+  "/:userId/profile",
+  JwtValidator.validateJwt,
+  controller.updateProfile
+);
+router.patch("/:userId/role", JwtValidator.validateJwt, controller.assignRole);
+router.delete("/:userId", JwtValidator.validateJwt, controller.delete);
 
 export default router;

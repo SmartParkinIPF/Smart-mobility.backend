@@ -4,7 +4,8 @@ import { EstacionamientoService } from "../../domain/services/Estacionamiento.Se
 import { EstacionamientoSupabaseRepository } from "../../infra/repositories/EstacionamientoRepository";
 import { UsersRepository } from "../../infra/repositories/UserRepository";
 import { AuthUserRepository } from "../../infra/repositories/AuthUserRepository";
-
+import { ValidatorJwt } from "../../core/middleware/validateJwt";
+const JwtValidator = new ValidatorJwt();
 const router = Router();
 const controller = new EstacionamientoController(
   new EstacionamientoService(
@@ -14,11 +15,15 @@ const controller = new EstacionamientoController(
   )
 );
 
-router.post("/", controller.create);
-router.get("/", controller.list);
-router.get("/:id", controller.getById);
-router.get("/por-establecimiento/:establecimientoId", controller.listByEstablecimiento);
-router.patch("/:id", controller.update);
-router.delete("/:id", controller.delete);
+router.post("/", JwtValidator.validateJwt, controller.create);
+router.get("/", JwtValidator.validateJwt, controller.list);
+router.get("/:id", JwtValidator.validateJwt, controller.getById);
+router.get(
+  "/por-establecimiento/:establecimientoId",
+  JwtValidator.validateJwt,
+  controller.listByEstablecimiento
+);
+router.patch("/:id", JwtValidator.validateJwt, controller.update);
+router.delete("/:id", JwtValidator.validateJwt, controller.delete);
 
 export default router;

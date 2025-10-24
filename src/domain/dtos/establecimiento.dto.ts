@@ -10,7 +10,7 @@ export type CreateEstablecimientoDTO = {
   provincia: string;
   pais: string;
   cp: string;
-  perimetro: GeoPolygon;
+  perimetro?: GeoPolygon;
   localizacion: LatLng;
   estado?: string; // opcional, por defecto 'activo'
   horario_general?: unknown; // estructura libre (jsonb)

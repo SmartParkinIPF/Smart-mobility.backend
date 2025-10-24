@@ -11,7 +11,7 @@ export class Establecimiento {
     public provincia: string,
     public pais: string,
     public cp: string,
-    public perimetro: GeoPolygon,
+    public perimetro: GeoPolygon | null,
     public localizacion: LatLng,
     public estado: string,
     public horario_general: unknown,

@@ -38,7 +38,7 @@ export class EstablecimientoService {
       data.provincia,
       data.pais,
       data.cp,
-      data.perimetro,
+      data.perimetro ?? null,
       data.localizacion,
       data.estado || "activo",
       data.horario_general ?? null,

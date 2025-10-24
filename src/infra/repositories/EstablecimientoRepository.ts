@@ -51,20 +51,6 @@ export class EstablecimientoSupabaseRepository
   implements IEstablecimientoRepository
 {
   async create(est: Establecimiento): Promise<Establecimiento> {
-    // Construir WKT POLYGON a partir de la lista de puntos
-    const points = est.perimetro ?? [];
-    if (points.length < 4) {
-      throw new Error("El perímetro debe tener al menos 4 puntos");
-    }
-    const first = points[0];
-    const last = points[points.length - 1];
-    const closed =
-      first.latitude === last.latitude && first.longitude === last.longitude
-        ? points
-        : [...points, first];
-    const coords = closed.map((p) => `${p.longitude} ${p.latitude}`).join(", ");
-    const polygonWkt = `POLYGON((${coords}))`;
-    // WKT para el punto de localización (lon lat)
     const pointWkt = `POINT(${est.localizacion.longitude} ${est.localizacion.latitude})`;
 
     const { data, error } = await supabaseDB
@@ -80,7 +66,7 @@ export class EstablecimientoSupabaseRepository
         provincia: est.provincia,
         pais: est.pais,
         cp: est.cp,
-        perimetro: polygonWkt,
+        perimetro: null,
         localizacion: pointWkt,
         estado: est.estado,
         horario_general: est.horario_general,
@@ -167,8 +153,7 @@ export class EstablecimientoSupabaseRepository
       const first = pts[0];
       const last = pts[pts.length - 1];
       const closed =
-        first.latitude === last.latitude &&
-        first.longitude === last.longitude
+        first.latitude === last.latitude && first.longitude === last.longitude
           ? pts
           : [...pts, first];
       const coords = closed

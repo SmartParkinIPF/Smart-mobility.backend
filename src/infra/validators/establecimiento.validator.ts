@@ -14,9 +14,7 @@ export const geoPointSchema = z.object({
   longitude: lngSchema,
 });
 
-export const geoPolygonSchema = z
-  .array(geoPointSchema)
-  .min(4, "location debe tener al menos 4 puntos");
+export const geoPolygonSchema = z.array(geoPointSchema);
 
 export const createEstablecimientoSchema = z.object({
   ownerId: z.string().uuid(),
@@ -28,7 +26,7 @@ export const createEstablecimientoSchema = z.object({
   provincia: z.string().min(1),
   pais: z.string().min(1),
   cp: z.string().min(1),
-  perimetro: geoPolygonSchema,
+  perimetro: geoPolygonSchema.optional(),
   localizacion: geoPointSchema,
   estado: z.string().optional().default("activo"),
   horario_general: z.any().optional(),

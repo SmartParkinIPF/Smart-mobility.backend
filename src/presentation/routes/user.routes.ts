@@ -21,6 +21,8 @@ router.patch(
   JwtValidator.validateJwt,
   controller.updateProfile
 );
+router.get("/me/profile", JwtValidator.validateJwt, controller.me);
+router.get("/:userId/profile", JwtValidator.validateJwt, controller.getProfile);
 router.patch("/:userId/role", JwtValidator.validateJwt, controller.assignRole);
 router.delete("/:userId", JwtValidator.validateJwt, controller.delete);
 

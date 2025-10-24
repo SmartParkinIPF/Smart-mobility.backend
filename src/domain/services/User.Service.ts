@@ -71,7 +71,7 @@ export class UserService {
 
     const token = await JwtValidator.createJwt(user);
 
-    console.log(token);
+    console.log(user1);
     // console.log({ session });
     return { user: this.toPublic(user1), token };
   }
@@ -129,6 +129,23 @@ export class UserService {
     await this.users.delete(targetUserId);
   }
 
+  async getProfile(requesterId: string, targetUserId?: string) {
+    const requester = await this.users.findById(requesterId);
+    if (!requester)
+      throw new AppError("Usuario autenticado no encontrado", 404);
+
+    const targetId = !targetUserId || targetUserId === requesterId ? requesterId : targetUserId;
+
+    if (targetId !== requesterId && requester.role !== "admin") {
+      throw new AppError("No estas autorizado para ver este usuario", 403);
+    }
+
+    const target = await this.users.findById(targetId);
+    if (!target) throw new AppError("Usuario objetivo no encontrado", 404);
+
+    return this.toPublic(target);
+  }
+
   private async waitForUser(userId: string): Promise<User | null> {
     for (let attempt = 0; attempt < USER_SYNC_MAX_RETRIES; attempt++) {
       const user = await this.users.findById(userId);
@@ -146,6 +163,7 @@ export class UserService {
 
   private toPublic(u: User) {
     const { ...rest } = u;
+    console.log(rest);
     return rest;
   }
 }

@@ -51,9 +51,8 @@ export class AuthController {
       return res.status(200).json({
         token: authToken,
         user: {
-          nombre: authUser.nombre,
           email: authUser.email,
-          rol_id: authUser.rol,
+          rol_id: authUser.role,
         },
       });
     } catch (error) {

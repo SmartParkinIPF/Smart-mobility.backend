@@ -14,6 +14,19 @@ export class UsersController {
     private readonly userService: UserService
   ) {}
 
+  me = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const requester = (req as any).authUser;
+      if (!requester?.id) throw new AppError("No autenticado", 401);
+      const user = await this.userService.getProfile(requester.id);
+      res.json({ user });
+    } catch (err) {
+      if ((err as any)?.issues)
+        return next(new AppError("Validación fallida", 400, (err as any).issues));
+      next(err);
+    }
+  };
+
   assignRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const targetUserId = req.params.userId;
@@ -72,6 +85,20 @@ export class UsersController {
         return next(
           new AppError("Validaci�n fallida", 400, (err as any).issues)
         );
+      next(err);
+    }
+  };
+
+  getProfile = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const requester = (req as any).authUser;
+      if (!requester?.id) throw new AppError("No autenticado", 401);
+      const targetUserId = req.params.userId;
+      const user = await this.userService.getProfile(requester.id, targetUserId);
+      res.json({ user });
+    } catch (err) {
+      if ((err as any)?.issues)
+        return next(new AppError("Validación fallida", 400, (err as any).issues));
       next(err);
     }
   };

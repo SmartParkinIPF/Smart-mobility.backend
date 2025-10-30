@@ -44,6 +44,25 @@ function buildUpdatePayload(
 }
 
 export class UsersRepository implements IUserRepository {
+  async listPaged({ q = "", page = 1, limit = 20 }: { q?: string; page?: number; limit?: number }) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    let query = supabaseDB
+      .from("usuarios")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (q) {
+      const pattern = `%${q}%`;
+      query = query.or(
+        `name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`
+      );
+    }
+    const { data, error, count } = await query;
+    if (error) throw error;
+    const items = (data as UserRow[]).map(toDomain);
+    return { items, total: count ?? items.length };
+  }
   async findByEmail(email: string): Promise<User | null> {
     const { data, error } = await supabaseDB
       .from("usuarios")

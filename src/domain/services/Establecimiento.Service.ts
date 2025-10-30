@@ -56,6 +56,10 @@ export class EstablecimientoService {
     return this.repo.list();
   }
 
+  async listByOwner(ownerId: string) {
+    return this.repo.listByOwner(ownerId);
+  }
+
   async update(
     id: string,
     partial: Partial<Establecimiento>

@@ -119,6 +119,24 @@ export class EstacionamientoSupabaseRepository
     return (data as ParkRow[]).map(toDomain);
   }
 
+  async listPaged({ q = "", page = 1, limit = 20 }: { q?: string; page?: number; limit?: number }) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    let query = supabaseDB
+      .from("estacionamientos")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (q) {
+      const pattern = `%${q}%`;
+      query = query.ilike("nombre", pattern);
+    }
+    const { data, error, count } = await query;
+    if (error) throw error;
+    const items = (data as ParkRow[]).map(toDomain);
+    return { items, total: count ?? items.length };
+  }
+
   async listByEstablecimiento(
     establecimientoId: string
   ): Promise<Estacionamiento[]> {

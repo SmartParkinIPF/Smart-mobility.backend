@@ -27,13 +27,13 @@ export class AuthController {
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = loginSchema.parse(req.body);
-      const { token,user } = await this.userService.login(parsed);
+      const { token } = await this.userService.login(parsed);
       res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         maxAge: 3600000,
       });
-      res.status(201).json([{ message: "Session iniciada correctamente" },{"user":user}]);
+      res.status(201).json({ message: "Session iniciada correctamente" });
     } catch (err) {
       next(this.toAppError(err));
     }
@@ -52,12 +52,9 @@ export class AuthController {
       return res.status(200).json({
         token: authToken,
         user: {
-          id: authUser.id,
-          name: authUser.name,
-          last_name: authUser.last_name,
-          phone: authUser.phone,
           email: authUser.email,
           rol_id: authUser.role,
+          id: authUser.id,
         },
       });
     } catch (error) {

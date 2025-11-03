@@ -71,7 +71,7 @@ export class UserService {
 
     const token = await JwtValidator.createJwt(user);
 
-    console.log("soy user",user1);
+    console.log(user1);
     // console.log({ session });
     return { user: this.toPublic(user1), token };
   }
@@ -163,7 +163,7 @@ export class UserService {
 
   private toPublic(u: User) {
     const { ...rest } = u;
-    console.log("soy rest",rest);
+    console.log(rest);
     return rest;
   }
 }

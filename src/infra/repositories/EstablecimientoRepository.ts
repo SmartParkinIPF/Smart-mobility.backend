@@ -123,6 +123,33 @@ export class EstablecimientoSupabaseRepository
     return (data as any[]).map((r) => toDomain(r as any));
   }
 
+  async listPaged({ q = "", page = 1, limit = 20 }: { q?: string; page?: number; limit?: number }) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    let query = supabaseDB
+      .from("establecimientos")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (q) {
+      const pattern = `%${q}%`;
+      query = query.ilike("nombre", pattern);
+    }
+    const { data, error, count } = await query;
+    if (error) throw error;
+    const items = (data as any[]).map((r) => toDomain(r as any));
+    return { items, total: count ?? items.length };
+  }
+
+  async listByOwner(ownerId: string): Promise<Establecimiento[]> {
+    const { data, error } = await supabaseDB
+      .from("establecimientos")
+      .select("*")
+      .eq("propietario_id", ownerId);
+    if (error) throw error;
+    return (data as any[]).map((r) => toDomain(r as any));
+  }
+
   async update(
     id: string,
     partial: Partial<Establecimiento>

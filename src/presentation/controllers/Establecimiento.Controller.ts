@@ -32,6 +32,17 @@ export class EstablecimientoController {
     }
   };
 
+  listMine = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const auth = (req as any).authUser;
+      if (!auth?.id) return res.status(401).json({ message: "No autorizado" });
+      const items = await this.service.listByOwner(auth.id);
+      res.json(items);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id;

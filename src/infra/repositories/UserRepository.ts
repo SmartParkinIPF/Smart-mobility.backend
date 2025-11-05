@@ -44,7 +44,15 @@ function buildUpdatePayload(
 }
 
 export class UsersRepository implements IUserRepository {
-  async listPaged({ q = "", page = 1, limit = 20 }: { q?: string; page?: number; limit?: number }) {
+  async listPaged({
+    q = "",
+    page = 1,
+    limit = 20,
+  }: {
+    q?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     let query = supabaseDB
@@ -137,7 +145,8 @@ export class UsersRepository implements IUserRepository {
       .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new Error("No se actualizo ningun usuario (id inexistente)");
+    if (!data)
+      throw new Error("No se actualizo ningun usuario (id inexistente)");
   }
 
   async delete(userId: string): Promise<void> {

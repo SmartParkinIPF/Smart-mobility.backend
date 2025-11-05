@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EstablecimientoService } from "../../domain/services/Establecimiento.Service";
+import { EstacionamientoSupabaseRepository } from "../../infra/repositories/EstacionamientoRepository";
+import { SlotsSupabaseRepository } from "../../infra/repositories/SlotsRepository";
 import {
   createEstablecimientoSchema,
   updateEstablecimientoSchema,
@@ -74,6 +76,49 @@ export class EstablecimientoController {
       const id = req.params.id;
       await this.service.delete(id);
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getGeometry = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id;
+      const est = await this.service.getById(id);
+      if (!est) return res.status(404).json({ message: "No encontrado" });
+      console.log(est);
+      // Repositorios para estacionamientos y slots
+      const parkRepo = new EstacionamientoSupabaseRepository();
+      const slotRepo = new SlotsSupabaseRepository();
+
+      const parks = await parkRepo.listByEstablecimiento(est.id);
+      console.log(parks);
+      const estacionamientos = [] as any[];
+      for (const p of parks) {
+        const slots = await slotRepo.listByEstacionamiento(p.id);
+        estacionamientos.push({
+          id: p.id,
+          nombre: p.nombre,
+          ubicacion: p.ubicacion,
+          perimetro_est: p.perimetro_est ?? null,
+          slots: slots.map((s) => ({
+            id: s.id,
+            estacionamiento_id: s.estacionamiento_id,
+            ubicacion_local: s.ubicacion_local,
+            tipo: s.tipo,
+            codigo: s.codigo,
+            ancho_cm: s.ancho_cm,
+            largo_cm: s.largo_cm,
+            estado_operativo: s.estado_operativo,
+          })),
+        });
+      }
+
+      const response = {
+        perimetro: (est as any).perimetro ?? null,
+        estacionamientos,
+      };
+      res.json(response);
     } catch (err) {
       next(err);
     }

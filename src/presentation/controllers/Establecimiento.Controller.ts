@@ -50,6 +50,7 @@ export class EstablecimientoController {
       const id = req.params.id;
       const item = await this.service.getById(id);
       if (!item) return res.status(404).json({ message: "No encontrado" });
+      console.log(item);
       res.json(item);
     } catch (err) {
       next(err);

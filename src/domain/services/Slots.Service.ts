@@ -34,6 +34,10 @@ export class SlotsService {
     return this.repo.listByEstacionamiento(estacionamientoId);
   }
 
+  async listByEstablecimiento(establecimientoId: string) {
+    return this.repo.listByEstablecimiento(establecimientoId);
+  }
+
   async update(id: string, partial: Partial<Slots>) {
     return this.repo.update(id, partial);
   }
@@ -42,4 +46,3 @@ export class SlotsService {
     await this.repo.delete(id);
   }
 }
-

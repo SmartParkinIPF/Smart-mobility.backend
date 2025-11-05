@@ -2,6 +2,7 @@ import { supabaseDB } from "../../config/database";
 import { Establecimiento } from "../../domain/entities/Establecimiento";
 import { IEstablecimientoRepository } from "../../domain/repositories/IEstablecimientoRepository";
 import type { LatLng } from "../../domain/types/coordsType";
+import * as wkx from "wkx";
 
 type EstRow = {
   id: string;
@@ -47,6 +48,46 @@ function toDomain(r: EstRow): Establecimiento {
         }
         return pts.length >= 3 ? pts : null;
       }
+
+      // Postgres/PostGIS may return geometry as WKB hex (EWKB) string like "01030000..." or "\\x01030000..."
+      // Intentamos parsear hex WKB usando 'wkx' si se detecta un patrón hex.
+      const hexRaw = raw.startsWith("\\x")
+        ? raw.slice(2)
+        : raw.startsWith("0x")
+        ? raw.slice(2)
+        : raw;
+      if (/^[0-9a-fA-F]+$/.test(hexRaw) && hexRaw.length >= 16) {
+        try {
+          const buf = Buffer.from(hexRaw, "hex");
+          const geom = wkx.Geometry.parse(buf);
+          const gj = geom.toGeoJSON();
+          if (
+            gj &&
+            ((gj as any).type === "Polygon" ||
+              (gj as any).type === "MultiPolygon")
+          ) {
+            const coords =
+              (gj as any).type === "Polygon"
+                ? (gj as any).coordinates[0]
+                : (gj as any).coordinates[0]?.[0] ?? (gj as any).coordinates[0];
+            if (Array.isArray(coords)) {
+              const pts = coords
+                .map((c: any) => ({
+                  latitude: Number(c[1]),
+                  longitude: Number(c[0]),
+                }))
+                .filter(
+                  (p: any) =>
+                    Number.isFinite(p.latitude) && Number.isFinite(p.longitude)
+                );
+              return pts.length >= 3 ? pts : null;
+            }
+          }
+        } catch (e) {
+          // ignore parse errors and fallback to null
+        }
+      }
+
       // Si es POINT(...) u otro, no lo consideramos perímetro
       return null;
     }
@@ -188,6 +229,7 @@ export class EstablecimientoSupabaseRepository
       throw error;
     }
     const r = data as any;
+    console.log(toDomain(r));
     return toDomain(r);
   }
 

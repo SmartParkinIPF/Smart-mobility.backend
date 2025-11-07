@@ -8,6 +8,7 @@ type PoliticaRow = {
   reglas_json: unknown;
   created_at: string;
   updated_at: string;
+  created_by: string | null;
 };
 
 function toDomain(r: PoliticaRow): PoliticaCancelacion {
@@ -15,17 +16,21 @@ function toDomain(r: PoliticaRow): PoliticaCancelacion {
     r.id,
     r.descripcion_corta,
     r.reglas_json,
+    r.created_by ?? null,
     new Date(r.created_at),
     new Date(r.updated_at)
   );
 }
 
-export class PoliticasCancelacionSupabaseRepository implements IPoliticaCancelacionRepository {
+export class PoliticasCancelacionSupabaseRepository
+  implements IPoliticaCancelacionRepository
+{
   async create(p: PoliticaCancelacion): Promise<PoliticaCancelacion> {
     const { data, error } = await supabaseDB
       .from("politicas_cancelacion")
       .insert({
         id: p.id,
+        created_by: p.created_by,
         descripcion_corta: p.descripcion_corta,
         reglas_json: p.reglas_json,
         created_at: p.created_at,
@@ -55,11 +60,25 @@ export class PoliticasCancelacionSupabaseRepository implements IPoliticaCancelac
     return (data as PoliticaRow[]).map(toDomain);
   }
 
-  async update(id: string, partial: Partial<PoliticaCancelacion>): Promise<PoliticaCancelacion> {
+  async listByUser(userId: string): Promise<PoliticaCancelacion[]> {
+    const { data, error } = await supabaseDB
+      .from("politicas_cancelacion")
+      .select("*")
+      .eq("created_by", userId);
+    if (error) throw error;
+    return (data as PoliticaRow[]).map(toDomain);
+  }
+
+  async update(
+    id: string,
+    partial: Partial<PoliticaCancelacion>
+  ): Promise<PoliticaCancelacion> {
     const payload: any = {};
     if (partial.descripcion_corta !== undefined)
       payload.descripcion_corta = partial.descripcion_corta;
-    if (partial.reglas_json !== undefined) payload.reglas_json = partial.reglas_json;
+    if (partial.reglas_json !== undefined)
+      payload.reglas_json = partial.reglas_json;
+
     payload.updated_at = new Date().toISOString();
 
     const { data, error } = await supabaseDB
@@ -80,4 +99,3 @@ export class PoliticasCancelacionSupabaseRepository implements IPoliticaCancelac
     if (error) throw error;
   }
 }
-

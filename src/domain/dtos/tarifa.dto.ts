@@ -10,7 +10,7 @@ export type CreateTarifaDto = {
   reglas_json?: unknown | null;
   vigencia_desde?: Date | null;
   vigencia_hasta?: Date | null;
+  created_by?: string;
 };
 
 export type UpdateTarifaDto = Partial<CreateTarifaDto>;
-

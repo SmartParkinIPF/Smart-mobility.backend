@@ -17,6 +17,7 @@ type TarifaRow = {
   vigencia_hasta: string | null;
   created_at: string;
   updated_at: string;
+  created_by: string | null;
 };
 
 function toDomain(r: TarifaRow): Tarifa {
@@ -33,6 +34,7 @@ function toDomain(r: TarifaRow): Tarifa {
     r.reglas_json ?? null,
     r.vigencia_desde ? new Date(r.vigencia_desde) : null,
     r.vigencia_hasta ? new Date(r.vigencia_hasta) : null,
+    r.created_by ?? null,
     new Date(r.created_at),
     new Date(r.updated_at)
   );
@@ -44,6 +46,7 @@ export class TarifasSupabaseRepository implements ITarifaRepository {
       .from("tarifas")
       .insert({
         id: t.id,
+        created_by: t.created_by,
         nombre: t.nombre,
         moneda: t.moneda,
         modo_calculo: t.modo_calculo,
@@ -77,6 +80,15 @@ export class TarifasSupabaseRepository implements ITarifaRepository {
 
   async list(): Promise<Tarifa[]> {
     const { data, error } = await supabaseDB.from("tarifas").select("*");
+    if (error) throw error;
+    return (data as TarifaRow[]).map(toDomain);
+  }
+
+  async listByUser(userId: string): Promise<Tarifa[]> {
+    const { data, error } = await supabaseDB
+      .from("tarifas")
+      .select("*")
+      .eq("created_by", userId);
     if (error) throw error;
     return (data as TarifaRow[]).map(toDomain);
   }
@@ -121,4 +133,3 @@ export class TarifasSupabaseRepository implements ITarifaRepository {
     if (error) throw error;
   }
 }
-

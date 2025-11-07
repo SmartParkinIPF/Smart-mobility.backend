@@ -13,9 +13,9 @@ const jwt = new ValidatorJwt();
 
 router.post("/", jwt.validateJwt, controller.create);
 router.get("/", jwt.validateJwt, controller.list);
+router.get("/by-user/:userId", jwt.validateJwt, controller.listByUser);
 router.get("/:id", jwt.validateJwt, controller.findById);
 router.patch("/:id", jwt.validateJwt, controller.update);
 router.delete("/:id", jwt.validateJwt, controller.remove);
 
 export default router;
-

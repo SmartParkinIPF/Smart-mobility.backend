@@ -12,8 +12,8 @@ export class Tarifa {
     public reglas_json: unknown | null,
     public vigencia_desde: Date | null,
     public vigencia_hasta: Date | null,
+    public created_by: string | null = null,
     public created_at: Date = new Date(),
     public updated_at: Date = new Date()
   ) {}
 }
-

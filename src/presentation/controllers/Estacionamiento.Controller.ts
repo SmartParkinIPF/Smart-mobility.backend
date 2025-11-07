@@ -12,6 +12,7 @@ export class EstacionamientoController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = createEstacionamientoSchema.parse(req.body);
+      console.log(parsed);
       const created = await this.service.create(parsed);
       res.status(201).json(created);
     } catch (err) {

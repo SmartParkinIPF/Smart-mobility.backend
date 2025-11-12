@@ -20,6 +20,7 @@ const controller = new EstablecimientoController(
 router.post("/", JwtValidator.validateJwt, controller.create);
 router.get("/", JwtValidator.validateJwt, controller.list);
 router.get("/mine", JwtValidator.validateJwt, controller.listMine);
+router.get("/public", controller.listPublicLocations);
 router.get("/:id", JwtValidator.validateJwt, controller.getById);
 router.get("/:id/geometry", JwtValidator.validateJwt, controller.getGeometry);
 router.patch("/:id", JwtValidator.validateJwt, controller.update);

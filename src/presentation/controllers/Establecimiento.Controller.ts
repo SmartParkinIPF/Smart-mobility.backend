@@ -8,8 +8,99 @@ import {
 } from "../../infra/validators/establecimiento.validator";
 import { AppError } from "../../core/errors/AppError";
 
+type LatLngLiteral = { lat: number; lng: number };
+type PublicMarker = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  coordinates: LatLngLiteral;
+  pinColor: string;
+  createdAt: string | null;
+};
+
+const parseLocation = (raw: any): LatLngLiteral | null => {
+  if (!raw) return null;
+
+  const tryFromPair = (lat: any, lng: any): LatLngLiteral | null => {
+    const toNumber = (value: any) =>
+      typeof value === "number" ? value : value != null ? Number(value) : NaN;
+    const latNum = toNumber(lat);
+    const lngNum = toNumber(lng);
+    if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+      return { lat: latNum, lng: lngNum };
+    }
+    return null;
+  };
+
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    const basic = tryFromPair(
+      (raw as any).lat ?? (raw as any).latitude ?? (raw as any).y,
+      (raw as any).lng ?? (raw as any).longitude ?? (raw as any).x
+    );
+    if (basic) return basic;
+
+    if (
+      raw.type &&
+      typeof raw.type === "string" &&
+      Array.isArray((raw as any).coordinates)
+    ) {
+      const coords = (raw as any).coordinates;
+      if (coords.length >= 2) {
+        const fromGeoJson = tryFromPair(coords[1], coords[0]);
+        if (fromGeoJson) return fromGeoJson;
+      }
+    }
+  }
+
+  if (Array.isArray(raw) && raw.length >= 2) {
+    const arr = tryFromPair(raw[1], raw[0]);
+    if (arr) return arr;
+  }
+
+  if (typeof raw === "string") {
+    const pointMatch = raw.match(/POINT\s*\(\s*([\-0-9\.]+)\s+([\-0-9\.]+)\s*\)/i);
+    if (pointMatch) {
+      const lng = Number(pointMatch[1]);
+      const lat = Number(pointMatch[2]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+    }
+  }
+
+  return null;
+};
+
 export class EstablecimientoController {
   constructor(private readonly service: EstablecimientoService) {}
+
+  listPublicLocations = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const items = await this.service.list();
+      const markers = items.reduce<PublicMarker[]>((acc, est) => {
+        const coordinates = parseLocation(est.localizacion);
+        if (!coordinates) return acc;
+        acc.push({
+          id: est.id,
+          title: est.nombre,
+          description: est.descripcion ?? null,
+          category: est.estado === "activo" ? "available" : "unavailable",
+          coordinates,
+          pinColor: est.estado === "activo" ? "green" : "gray",
+          createdAt: est.created_at?.toISOString?.() ?? null,
+        });
+        return acc;
+      }, []);
+      res.json({ markers });
+    } catch (err) {
+      next(err);
+    }
+  };
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {

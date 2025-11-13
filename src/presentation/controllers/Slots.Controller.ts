@@ -57,6 +57,22 @@ export class SlotsController {
     }
   };
 
+  listByEstablecimiento = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const establecimientoId = req.params.establecimientoId;
+      if (!establecimientoId)
+        return res.status(400).json({ message: "Falta establecimientoId" });
+      const items = await this.service.listByEstablecimiento(establecimientoId);
+      res.json(items);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id;
@@ -82,4 +98,3 @@ export class SlotsController {
     }
   };
 }
-

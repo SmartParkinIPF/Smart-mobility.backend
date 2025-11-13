@@ -59,6 +59,15 @@ export class HorariosSupabaseRepository implements IHorarioRepository {
     return (data as HorarioRow[]).map(toDomain);
   }
 
+  async listByUser(userId: string): Promise<Horario[]> {
+    const { data, error } = await supabaseDB
+      .from("horarios")
+      .select("*")
+      .eq("id_usuario", userId);
+    if (error) throw error;
+    return (data as HorarioRow[]).map(toDomain);
+  }
+
   async update(id: string, partial: Partial<Horario>): Promise<Horario> {
     const payload: any = {};
 

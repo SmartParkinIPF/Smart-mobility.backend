@@ -6,7 +6,7 @@ import { CreateTarifaDto, UpdateTarifaDto } from "../dtos/tarifa.dto";
 export class TarifaService {
   constructor(private readonly repo: ITarifaRepository) {}
 
-  async create(data: CreateTarifaDto) {
+  async create(data: CreateTarifaDto, createdBy: string) {
     const tarifa = new Tarifa(
       crypto.randomUUID(),
       data.nombre,
@@ -19,7 +19,8 @@ export class TarifaService {
       data.maximo_diario ?? null,
       data.reglas_json ?? null,
       data.vigencia_desde ?? null,
-      data.vigencia_hasta ?? null
+      data.vigencia_hasta ?? null,
+      createdBy
     );
     return this.repo.create(tarifa);
   }
@@ -32,6 +33,10 @@ export class TarifaService {
     return this.repo.list();
   }
 
+  async listByUser(userId: string) {
+    return this.repo.listByUser(userId);
+  }
+
   async update(id: string, partial: UpdateTarifaDto) {
     return this.repo.update(id, partial as Partial<Tarifa>);
   }
@@ -40,4 +45,3 @@ export class TarifaService {
     return this.repo.delete(id);
   }
 }
-

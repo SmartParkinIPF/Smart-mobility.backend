@@ -12,7 +12,7 @@ export const createTarifaSchema = z.object({
   reglas_json: z.any().optional().nullable(),
   vigencia_desde: z.coerce.date().optional().nullable(),
   vigencia_hasta: z.coerce.date().optional().nullable(),
+  created_by: z.string().uuid(),
 });
 
 export const updateTarifaSchema = createTarifaSchema.partial();
-

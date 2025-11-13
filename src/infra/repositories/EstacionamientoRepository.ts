@@ -24,6 +24,70 @@ type ParkRow = {
 };
 
 function toDomain(p: ParkRow): Estacionamiento {
+  // Parse possible perimetro formats (WKT POLYGON, GeoJSON, array)
+  const parsePerimetro = (
+    raw: any
+  ): { latitude: number; longitude: number }[] | null => {
+    if (!raw) return null;
+    if (typeof raw === "string") {
+      const polyMatch = raw.match(/POLYGON\s*\(\s*\(\s*([^\)]+)\s*\)\s*\)/i);
+      if (polyMatch) {
+        const pairs = polyMatch[1]
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const pts: { latitude: number; longitude: number }[] = [];
+        for (const pair of pairs) {
+          const [lngStr, latStr] = pair.split(/\s+/);
+          const lng = Number(lngStr);
+          const lat = Number(latStr);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+          pts.push({ latitude: lat, longitude: lng });
+        }
+        return pts.length >= 3 ? pts : null;
+      }
+      return null;
+    }
+    if (typeof raw === "object") {
+      if (raw.type && Array.isArray(raw.coordinates)) {
+        const type = String(raw.type).toLowerCase();
+        if (type === "polygon" || type === "multipolygon") {
+          const coords =
+            type === "polygon"
+              ? raw.coordinates[0] ?? raw.coordinates
+              : raw.coordinates[0]?.[0] ?? raw.coordinates[0] ?? [];
+          if (Array.isArray(coords)) {
+            const pts = coords
+              .map((c: any) => {
+                const [lng, lat] = c;
+                const latN = Number(lat);
+                const lngN = Number(lng);
+                if (!Number.isFinite(latN) || !Number.isFinite(lngN))
+                  return null;
+                return { latitude: latN, longitude: lngN };
+              })
+              .filter(Boolean);
+            return pts.length >= 3 ? (pts as any) : null;
+          }
+        }
+      }
+      if (Array.isArray(raw) && raw.length >= 3) {
+        const pts = raw
+          .map((it: any) => {
+            const lat = Number(it?.latitude ?? it?.lat ?? it?.y ?? it?.[1]);
+            const lng = Number(it?.longitude ?? it?.lng ?? it?.x ?? it?.[0]);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+            return { latitude: lat, longitude: lng };
+          })
+          .filter(Boolean);
+        return pts.length >= 3 ? (pts as any) : null;
+      }
+    }
+    return null;
+  };
+
+  const parsed = parsePerimetro((p as any).perimetro_est ?? null);
+
   return new Estacionamiento(
     p.id,
     p.establecimiento_id,
@@ -39,7 +103,7 @@ function toDomain(p: ParkRow): Estacionamiento {
     p.politica_cancelacion_id,
     p.estado,
     p.ubicacion,
-    [],
+    parsed ?? null,
     new Date(p.created_at),
     new Date(p.updated_at)
   );
@@ -61,9 +125,7 @@ export class EstacionamientoSupabaseRepository
         ? points
         : [...points, first];
 
-    const coords = closed
-      .map((p) => `${p.longitude} ${p.latitude}`)
-      .join(", ");
+    const coords = closed.map((p) => `${p.longitude} ${p.latitude}`).join(", ");
     const polygonWkt = `POLYGON((${coords}))`;
 
     const pointWkt = `POINT(${park.ubicacion.longitude} ${park.ubicacion.latitude})`;
@@ -119,7 +181,15 @@ export class EstacionamientoSupabaseRepository
     return (data as ParkRow[]).map(toDomain);
   }
 
-  async listPaged({ q = "", page = 1, limit = 20 }: { q?: string; page?: number; limit?: number }) {
+  async listPaged({
+    q = "",
+    page = 1,
+    limit = 20,
+  }: {
+    q?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     let query = supabaseDB
@@ -178,8 +248,7 @@ export class EstacionamientoSupabaseRepository
       const first = pts[0];
       const last = pts[pts.length - 1];
       const closed =
-        first.latitude === last.latitude &&
-        first.longitude === last.longitude
+        first.latitude === last.latitude && first.longitude === last.longitude
           ? pts
           : [...pts, first];
       const coords = closed

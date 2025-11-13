@@ -21,6 +21,9 @@ export class HorarioService {
   async list() {
     return this.repo.list();
   }
+  async listByUser(userId: string) {
+    return this.repo.listByUser(userId);
+  }
   async update(id: string, partial: Partial<Horario>) {
     return this.repo.update(id, partial);
   }

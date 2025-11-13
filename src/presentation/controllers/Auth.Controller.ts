@@ -6,6 +6,7 @@ import {
   logoutSchema,
 } from "../../infra/validators/user.validator";
 import { AppError } from "../../core/errors/AppError";
+import { id } from "zod/v4/locales";
 
 export class AuthController {
   constructor(private readonly userService: UserService) {}
@@ -53,6 +54,7 @@ export class AuthController {
         user: {
           email: authUser.email,
           rol_id: authUser.role,
+          id: authUser.id,
         },
       });
     } catch (error) {

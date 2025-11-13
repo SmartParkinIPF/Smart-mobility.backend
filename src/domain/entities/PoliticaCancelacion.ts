@@ -3,8 +3,8 @@ export class PoliticaCancelacion {
     public id: string,
     public descripcion_corta: string | null,
     public reglas_json: unknown,
+    public created_by: string | null = null,
     public created_at: Date = new Date(),
     public updated_at: Date = new Date()
   ) {}
 }
-

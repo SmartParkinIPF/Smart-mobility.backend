@@ -38,6 +38,24 @@ export class HorarioController {
     }
   };
 
+  listByUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authUser = (req as any)?.authUser;
+      if (!authUser) throw new AppError("No autenticado", 401);
+      const paramId = req.params.userId;
+      const requestedId = (paramId ?? authUser.id)?.toString();
+      if (!requestedId) throw new AppError("Usuario inválido", 400);
+      const isSameUser = authUser.id?.toString() === requestedId;
+      if (!isSameUser && !this.isAdmin(authUser)) {
+        throw new AppError("No autorizado", 403);
+      }
+      const items = await this.service.listByUser(requestedId);
+      res.status(200).json(items);
+    } catch (err) {
+      next(this.toAppError(err));
+    }
+  };
+
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -63,5 +81,21 @@ export class HorarioController {
     if ((err as any)?.issues)
       return new AppError("Validación fallida", 400, (err as any).issues);
     return err as any;
+  }
+
+  private isAdmin(user: any): boolean {
+    if (!user) return false;
+    const candidates = [
+      user.rol_id,
+      user.rolId,
+      user.role,
+      user.role_id,
+      user.roleId,
+      user.roleID,
+    ];
+    return candidates
+      .filter((c) => c != null)
+      .map((c) => String(c).toLowerCase().trim())
+      .some((v) => v === "admin" || v === "administrador" || v === "1");
   }
 }

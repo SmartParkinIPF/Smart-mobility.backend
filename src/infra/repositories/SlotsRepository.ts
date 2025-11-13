@@ -86,6 +86,31 @@ export class SlotsSupabaseRepository implements ISlotsRepository {
     return (data as SlotRow[]).map(toDomain);
   }
 
+  async listByEstablecimiento(establecimientoId: string): Promise<Slots[]> {
+    // Usamos la selección con la relación a la tabla estacionamientos y filtramos por el campo establecimiento_id
+    const { data, error } = await supabaseDB
+      .from("slots")
+      .select("*, estacionamientos(*)")
+      .eq("estacionamientos.establecimiento_id", establecimientoId);
+    if (error) throw error;
+    // La respuesta incluye un objeto 'estacionamientos' embebido; extraemos solo los campos de slot
+    const rows = (data as any[]).map((r) => ({
+      id: r.id,
+      estacionamiento_id: r.estacionamiento_id,
+      codigo: r.codigo,
+      tipo: r.tipo,
+      ancho_cm: r.ancho_cm,
+      largo_cm: r.largo_cm,
+      ubicacion_local: r.ubicacion_local,
+      estado_operativo: r.estado_operativo,
+      tarifa_id: r.tarifa_id,
+      es_reservable: r.es_reservable,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    })) as SlotRow[];
+    return rows.map(toDomain);
+  }
+
   async update(id: string, partial: Partial<Slots>): Promise<Slots> {
     const payload: any = {};
     if (partial.codigo !== undefined) payload.codigo = partial.codigo;
@@ -116,4 +141,3 @@ export class SlotsSupabaseRepository implements ISlotsRepository {
     if (error) throw error;
   }
 }
-

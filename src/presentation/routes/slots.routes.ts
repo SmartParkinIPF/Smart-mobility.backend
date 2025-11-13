@@ -18,6 +18,11 @@ router.get(
   JwtValidator.validateJwt,
   controller.listByEstacionamiento
 );
+router.get(
+  "/por-establecimiento/:establecimientoId",
+  JwtValidator.validateJwt,
+  controller.listByEstablecimiento
+);
 router.patch("/:id", JwtValidator.validateJwt, controller.update);
 router.delete("/:id", JwtValidator.validateJwt, controller.delete);
 

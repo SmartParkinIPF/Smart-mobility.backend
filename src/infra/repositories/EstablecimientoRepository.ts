@@ -2,6 +2,7 @@ import { supabaseDB } from "../../config/database";
 import { Establecimiento } from "../../domain/entities/Establecimiento";
 import { IEstablecimientoRepository } from "../../domain/repositories/IEstablecimientoRepository";
 import type { LatLng } from "../../domain/types/coordsType";
+import * as wkx from "wkx";
 
 type EstRow = {
   id: string;
@@ -24,7 +25,123 @@ type EstRow = {
 };
 
 function toDomain(r: EstRow): Establecimiento {
-  // location almacenado como geography(Point). No podemos leerlo directo; lo devolvemos como null para lectura rápida
+  // Intentamos parsear la columna `perimetro` en distintos formatos (WKT POLYGON, GeoJSON, array de puntos)
+  const parsePerimetro = (
+    raw: any
+  ): { latitude: number; longitude: number }[] | null => {
+    if (!raw) return null;
+    // Si viene como string WKT POLYGON: POLYGON((lng lat, lng lat, ...))
+    if (typeof raw === "string") {
+      const polyMatch = raw.match(/POLYGON\s*\(\s*\(\s*([^\)]+)\s*\)\s*\)/i);
+      if (polyMatch) {
+        const pairs = polyMatch[1]
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const pts: { latitude: number; longitude: number }[] = [];
+        for (const pair of pairs) {
+          const [lngStr, latStr] = pair.split(/\s+/);
+          const lng = Number(lngStr);
+          const lat = Number(latStr);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+          pts.push({ latitude: lat, longitude: lng });
+        }
+        return pts.length >= 3 ? pts : null;
+      }
+
+      // Postgres/PostGIS may return geometry as WKB hex (EWKB) string like "01030000..." or "\\x01030000..."
+      // Intentamos parsear hex WKB usando 'wkx' si se detecta un patrón hex.
+      const hexRaw = raw.startsWith("\\x")
+        ? raw.slice(2)
+        : raw.startsWith("0x")
+        ? raw.slice(2)
+        : raw;
+      if (/^[0-9a-fA-F]+$/.test(hexRaw) && hexRaw.length >= 16) {
+        try {
+          const buf = Buffer.from(hexRaw, "hex");
+          const geom = wkx.Geometry.parse(buf);
+          const gj = geom.toGeoJSON();
+          if (
+            gj &&
+            ((gj as any).type === "Polygon" ||
+              (gj as any).type === "MultiPolygon")
+          ) {
+            const coords =
+              (gj as any).type === "Polygon"
+                ? (gj as any).coordinates[0]
+                : (gj as any).coordinates[0]?.[0] ?? (gj as any).coordinates[0];
+            if (Array.isArray(coords)) {
+              const pts = coords
+                .map((c: any) => ({
+                  latitude: Number(c[1]),
+                  longitude: Number(c[0]),
+                }))
+                .filter(
+                  (p: any) =>
+                    Number.isFinite(p.latitude) && Number.isFinite(p.longitude)
+                );
+              return pts.length >= 3 ? pts : null;
+            }
+          }
+        } catch (e) {
+          // ignore parse errors and fallback to null
+        }
+      }
+
+      // Si es POINT(...) u otro, no lo consideramos perímetro
+      return null;
+    }
+
+    // Si viene como GeoJSON-like
+    if (typeof raw === "object") {
+      // Feature/GeoJSON Polygon
+      if (raw.type && Array.isArray(raw.coordinates)) {
+        const type = String(raw.type).toLowerCase();
+        if (type === "polygon" || type === "multipolygon") {
+          const coords =
+            type === "polygon"
+              ? raw.coordinates[0] ?? raw.coordinates
+              : raw.coordinates[0]?.[0] ?? raw.coordinates[0] ?? [];
+          if (Array.isArray(coords)) {
+            const pts = coords
+              .map((c: any) => {
+                const [lng, lat] = c;
+                const latN = Number(lat);
+                const lngN = Number(lng);
+                if (!Number.isFinite(latN) || !Number.isFinite(lngN))
+                  return null;
+                return { latitude: latN, longitude: lngN };
+              })
+              .filter(Boolean);
+            return pts.length >= 3 ? (pts as any) : null;
+          }
+        }
+      }
+
+      // Si ya viene como array de puntos [{latitude,longitude}, ...]
+      if (Array.isArray(raw) && raw.length >= 3) {
+        const pts = raw
+          .map((it: any) => {
+            const lat = Number(it?.latitude ?? it?.lat ?? it?.y ?? it?.[1]);
+            const lng = Number(it?.longitude ?? it?.lng ?? it?.x ?? it?.[0]);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+            return { latitude: lat, longitude: lng };
+          })
+          .filter(Boolean);
+        return pts.length >= 3 ? (pts as any) : null;
+      }
+    }
+
+    return null;
+  };
+
+  const parsedPerimeter = parsePerimetro(
+    (r as any).perimetro ??
+      (r as any).perimetro_est ??
+      (r as any).perimeter ??
+      null
+  );
+
   return new Establecimiento(
     r.id,
     r.propietario_id,
@@ -36,8 +153,8 @@ function toDomain(r: EstRow): Establecimiento {
     r.provincia,
     r.pais,
     r.cp,
-    [],
-    // lecturas de geography requieren funciones; aquí lo dejamos vacío para no romper typing
+    parsedPerimeter ?? null,
+    // lecturas de geography requieren funciones; devolvemos lo que haya en la columna
     r.localizacion,
     r.estado,
     r.horario_general,
@@ -112,6 +229,7 @@ export class EstablecimientoSupabaseRepository
       throw error;
     }
     const r = data as any;
+    console.log(toDomain(r));
     return toDomain(r);
   }
 
@@ -123,7 +241,15 @@ export class EstablecimientoSupabaseRepository
     return (data as any[]).map((r) => toDomain(r as any));
   }
 
-  async listPaged({ q = "", page = 1, limit = 20 }: { q?: string; page?: number; limit?: number }) {
+  async listPaged({
+    q = "",
+    page = 1,
+    limit = 20,
+  }: {
+    q?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     let query = supabaseDB

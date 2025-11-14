@@ -19,6 +19,12 @@ type PublicMarker = {
   createdAt: string | null;
 };
 
+const toSearchableText = (value: unknown) =>
+  typeof value === "string" ? value.toLowerCase() : "";
+
+const normalizeSearch = (query: unknown) =>
+  typeof query === "string" ? query.trim().toLowerCase() : "";
+
 const parseLocation = (raw: any): LatLngLiteral | null => {
   if (!raw) return null;
 
@@ -73,16 +79,64 @@ const parseLocation = (raw: any): LatLngLiteral | null => {
 };
 
 export class EstablecimientoController {
+  private readonly parkRepo = new EstacionamientoSupabaseRepository();
+  private readonly slotRepo = new SlotsSupabaseRepository();
+
   constructor(private readonly service: EstablecimientoService) {}
 
+  private async buildGeometryPayload(est: any) {
+    const parks = await this.parkRepo.listByEstablecimiento(est.id);
+    const estacionamientos = await Promise.all(
+      parks.map(async (p) => {
+        const slots = await this.slotRepo.listByEstacionamiento(p.id);
+        return {
+          id: p.id,
+          nombre: p.nombre,
+          ubicacion: p.ubicacion,
+          perimetro_est: (p as any).perimetro_est ?? null,
+          slots: slots.map((s) => ({
+            id: s.id,
+            estacionamiento_id: s.estacionamiento_id,
+            ubicacion_local: s.ubicacion_local,
+            tipo: s.tipo,
+            codigo: s.codigo,
+            ancho_cm: s.ancho_cm,
+            largo_cm: s.largo_cm,
+            estado_operativo: s.estado_operativo,
+          })),
+        };
+      })
+    );
+    return {
+      perimetro: (est as any).perimetro ?? null,
+      estacionamientos,
+    };
+  }
+
   listPublicLocations = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
+      const search = normalizeSearch(req.query.q ?? req.query.search);
       const items = await this.service.list();
-      const markers = items.reduce<PublicMarker[]>((acc, est) => {
+      const filtered = search
+        ? items.filter((est) => {
+            const haystack = [
+              est.nombre,
+              est.descripcion,
+              `${est.direccion_calle ?? ""} ${est.direccion_numero ?? ""}`.trim(),
+              est.ciudad,
+              est.provincia,
+              est.pais,
+            ]
+              .map(toSearchableText)
+              .filter(Boolean);
+            return haystack.some((text) => text.includes(search));
+          })
+        : items;
+      const markers = filtered.reduce<PublicMarker[]>((acc, est) => {
         const coordinates = parseLocation(est.localizacion);
         if (!coordinates) return acc;
         acc.push({
@@ -96,7 +150,7 @@ export class EstablecimientoController {
         });
         return acc;
       }, []);
-      res.json({ markers });
+      res.json({ markers, total: filtered.length });
     } catch (err) {
       next(err);
     }
@@ -178,38 +232,23 @@ export class EstablecimientoController {
       const id = req.params.id;
       const est = await this.service.getById(id);
       if (!est) return res.status(404).json({ message: "No encontrado" });
-      console.log(est);
-      // Repositorios para estacionamientos y slots
-      const parkRepo = new EstacionamientoSupabaseRepository();
-      const slotRepo = new SlotsSupabaseRepository();
+      const response = await this.buildGeometryPayload(est);
+      res.json(response);
+    } catch (err) {
+      next(err);
+    }
+  };
 
-      const parks = await parkRepo.listByEstablecimiento(est.id);
-      console.log(parks);
-      const estacionamientos = [] as any[];
-      for (const p of parks) {
-        const slots = await slotRepo.listByEstacionamiento(p.id);
-        estacionamientos.push({
-          id: p.id,
-          nombre: p.nombre,
-          ubicacion: p.ubicacion,
-          perimetro_est: p.perimetro_est ?? null,
-          slots: slots.map((s) => ({
-            id: s.id,
-            estacionamiento_id: s.estacionamiento_id,
-            ubicacion_local: s.ubicacion_local,
-            tipo: s.tipo,
-            codigo: s.codigo,
-            ancho_cm: s.ancho_cm,
-            largo_cm: s.largo_cm,
-            estado_operativo: s.estado_operativo,
-          })),
-        });
-      }
-
-      const response = {
-        perimetro: (est as any).perimetro ?? null,
-        estacionamientos,
-      };
+  getPublicGeometry = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const id = req.params.id;
+      const est = await this.service.getById(id);
+      if (!est) return res.status(404).json({ message: "No encontrado" });
+      const response = await this.buildGeometryPayload(est);
       res.json(response);
     } catch (err) {
       next(err);

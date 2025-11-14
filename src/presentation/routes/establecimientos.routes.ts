@@ -22,6 +22,7 @@ const controller = new EstablecimientoController(
 router.post("/", JwtValidator.validateJwt, controller.create);
 router.get("/", JwtValidator.validateJwt, controller.list);
 router.get("/mine", JwtValidator.validateJwt, controller.listMine);
+
 // Resumen + listado de slots por establecimiento (agregado para mobile)
 router.get(
   "/:id/slots",
@@ -57,20 +58,41 @@ router.get(
         .lte("desde", nowIso)
         .gte("hasta", nowIso);
       if (resErr) throw resErr;
-      const occSet = new Set((reservasData as any[]).map((r: any) => r.slot_id).filter(Boolean));
+      const reservas = (reservasData as any[]) || [];
+      const occSet = new Set(
+        reservas.map((r: any) => r.slot_id).filter(Boolean)
+      );
 
-      const total = slots.length;
-      const ocupados = slots.reduce((acc, s) => acc + (occSet.has(s.id) ? 1 : 0), 0);
+      // Combinar estado_operativo (por ejemplo, 'bloqueado') con reservas
+      const mapped = slots.map((s: any) => {
+        const rawOperativo = (s.estado_operativo || "").toString().toLowerCase();
+        const bloqueado = rawOperativo.includes("bloqueado");
+        const reservado = occSet.has(s.id);
+        const ocupado = bloqueado || reservado;
+
+        let estado = "libre";
+        if (bloqueado) estado = "bloqueado";
+        else if (reservado) estado = "ocupado";
+
+        const disponible = !ocupado;
+
+        return {
+          id: s.id,
+          estacionamiento_id: s.estacionamiento_id,
+          numero: s.codigo,
+          estado,
+          ocupado,
+          disponible,
+          estado_operativo: s.estado_operativo,
+        };
+      });
+
+      const total = mapped.length;
+      const ocupados = mapped.reduce(
+        (acc: number, s: any) => acc + (s.ocupado ? 1 : 0),
+        0
+      );
       const libres = Math.max(0, total - ocupados);
-
-      const mapped = slots.map((s) => ({
-        id: s.id,
-        estacionamiento_id: s.estacionamiento_id,
-        numero: s.codigo,
-        estado: occSet.has(s.id) ? "ocupado" : "libre",
-        ocupado: occSet.has(s.id),
-        disponible: !occSet.has(s.id),
-      }));
 
       res.json({ total, ocupados, libres, slots: mapped });
     } catch (err) {
@@ -78,6 +100,7 @@ router.get(
     }
   }
 );
+
 router.get("/:id", JwtValidator.validateJwt, controller.getById);
 router.patch("/:id", JwtValidator.validateJwt, controller.update);
 router.delete("/:id", JwtValidator.validateJwt, controller.delete);

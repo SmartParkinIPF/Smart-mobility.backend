@@ -72,7 +72,8 @@ export class HorariosSupabaseRepository implements IHorarioRepository {
     const payload: any = {};
 
     if (partial.tipo !== undefined) payload.tipo = partial.tipo;
-    if (partial.definicion !== undefined) payload.definicion = partial.definicion;
+    if (partial.definicion !== undefined)
+      payload.definicion = partial.definicion;
     payload.updated_at = new Date().toISOString();
 
     const { data, error } = await supabaseDB

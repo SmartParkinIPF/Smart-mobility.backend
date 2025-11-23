@@ -4,4 +4,5 @@ export type CreatePoliticaCancelacionDto = {
   created_by?: string | null;
 };
 
-export type UpdatePoliticaCancelacionDto = Partial<CreatePoliticaCancelacionDto>;
+export type UpdatePoliticaCancelacionDto =
+  Partial<CreatePoliticaCancelacionDto>;

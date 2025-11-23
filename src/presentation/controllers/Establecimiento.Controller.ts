@@ -65,7 +65,9 @@ const parseLocation = (raw: any): LatLngLiteral | null => {
   }
 
   if (typeof raw === "string") {
-    const pointMatch = raw.match(/POINT\s*\(\s*([\-0-9\.]+)\s+([\-0-9\.]+)\s*\)/i);
+    const pointMatch = raw.match(
+      /POINT\s*\(\s*([\-0-9\.]+)\s+([\-0-9\.]+)\s*\)/i
+    );
     if (pointMatch) {
       const lng = Number(pointMatch[1]);
       const lat = Number(pointMatch[2]);
@@ -126,7 +128,9 @@ export class EstablecimientoController {
             const haystack = [
               est.nombre,
               est.descripcion,
-              `${est.direccion_calle ?? ""} ${est.direccion_numero ?? ""}`.trim(),
+              `${est.direccion_calle ?? ""} ${
+                est.direccion_numero ?? ""
+              }`.trim(),
               est.ciudad,
               est.provincia,
               est.pais,

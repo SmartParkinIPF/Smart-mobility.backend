@@ -7,8 +7,8 @@ export const createPagoSchema = z.object({
     .string()
     .length(3, { message: "moneda debe tener 3 caracteres" })
     .optional()
-    .default("ARS"),
-  metodo: z.string().optional().default("mercado_pago"),
+    .default("USD"),
+  metodo: z.string().optional().default("paypal"),
   descripcion: z.string().optional(),
   back_urls: z
     .object({

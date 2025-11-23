@@ -1,10 +1,10 @@
 export type CreatePagoDto = {
   reserva_id: string;
   monto: number;
-  moneda?: string; // default 'ARS'
-  metodo?: string; // default 'mercado_pago'
+  moneda?: string; // default 'USD'
+  metodo?: string; // default 'paypal'
   descripcion?: string;
-  // optional back urls for MP checkout
+  // optional back urls for redirect after PayPal checkout
   back_urls?: {
     success?: string;
     pending?: string;

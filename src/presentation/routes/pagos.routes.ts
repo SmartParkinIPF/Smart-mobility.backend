@@ -9,7 +9,7 @@ const router = Router();
 const controller = new PagosController(new PagoService(new PagosSupabaseRepository()));
 const jwt = new ValidatorJwt();
 
-// Crear intención de pago con Mercado Pago (crea registro en 'pagos')
+// Crear intención de pago con PayPal (crea registro en 'pagos')
 router.post("/", jwt.validateJwt, controller.createIntent);
 
 // Consultar pago por id
@@ -18,7 +18,7 @@ router.get("/:id", jwt.validateJwt, controller.getById);
 // Listar pagos por reserva
 router.get("/reserva/:reservaId", jwt.validateJwt, controller.listByReserva);
 
-// Webhook Mercado Pago (sin auth)
+// Webhook PayPal (sin auth)
 router.post("/webhook", controller.webhook);
 router.get("/webhook", controller.webhook); // por compatibilidad
 

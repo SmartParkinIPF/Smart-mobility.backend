@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PagoService } from "../../domain/services/Pago.Service";
 import { createPagoSchema } from "../../infra/validators/pago.validator";
 import { AppError } from "../../core/errors/AppError";
-import { MercadoPagoProvider } from "../../infra/providers/mercadopago";
+import { PayPalProvider } from "../../infra/providers/paypal";
 
 export class PagosController {
   constructor(private readonly service: PagoService) {}
@@ -37,38 +37,48 @@ export class PagosController {
     }
   };
 
-  // Mercado Pago webhook (notifications)
+  // PayPal webhook (notifications)
   webhook = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { type, action } = req.query as any;
-      // data.id contains payment or merchant_order id depending on topic
-      const dataId = (req.query?.["data.id"] as string) || (req.body?.data?.id as string);
+      const event = req.body as any;
+      const eventType: string | undefined = event?.event_type;
+      const resource: any = event?.resource || {};
 
-      if (!dataId) {
-        return res.status(200).json({ ok: true });
+      if (!eventType || !resource) return res.status(200).json({ ok: true });
+
+      const purchaseUnit = (resource.purchase_units || [])[0];
+      let pagoId: string | undefined =
+        purchaseUnit?.reference_id ||
+        purchaseUnit?.custom_id ||
+        resource.reference_id ||
+        resource.invoice_id;
+
+      const relatedOrderId: string | undefined =
+        resource.id || resource.supplementary_data?.related_ids?.order_id;
+
+      if (!pagoId && relatedOrderId) {
+        const order = await PayPalProvider.getOrder(relatedOrderId);
+        pagoId = order?.purchase_units?.[0]?.reference_id;
+        if (order?.status) resource.status = order.status;
       }
 
-      if (type === "payment" || action === "payment.created" || action === "payment.updated") {
-        const payment = await MercadoPagoProvider.getPayment(dataId);
-        const pagoId: string | undefined = payment.external_reference;
-        if (pagoId) {
-          await this.service.updateEstado(pagoId, {
-            estado: this.service.mapMpStatusToEstado(payment.status),
-            proveedor_tx_id: String(payment.id),
-            recibo_url: payment.receipt_url || payment.ticket_url || null,
-          });
-        }
-      } else if (type === "merchant_order") {
-        const order = await MercadoPagoProvider.getMerchantOrder(dataId);
-        const pagoId: string | undefined = order.external_reference;
-        if (pagoId && order.payments && order.payments.length > 0) {
-          const last = order.payments[order.payments.length - 1];
-          await this.service.updateEstado(pagoId, {
-            estado: this.service.mapMpStatusToEstado(last.status),
-            proveedor_tx_id: String(last.id),
-          });
-        }
-      }
+      if (!pagoId) return res.status(200).json({ ok: true });
+
+      const paypalStatus: string =
+        (resource.status as string | undefined) ||
+        (eventType?.includes(".") ? eventType.split(".").pop() : eventType) ||
+        "PENDING";
+
+      const reciboUrl: string | null =
+        Array.isArray(resource.links) && resource.links.length > 0
+          ? resource.links.find((l: any) => l.rel === "self")?.href || null
+          : null;
+
+      await this.service.updateEstado(pagoId, {
+        estado: this.service.mapPaypalStatusToEstado(paypalStatus),
+        proveedor_tx_id: (resource.id as string | undefined) || relatedOrderId || null,
+        recibo_url: reciboUrl,
+      });
 
       res.status(200).json({ ok: true });
     } catch (err) {

@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { IPagoRepository } from "../repositories/iPagoRepository";
 import { Pago } from "../entities/Pago";
 import { CreatePagoDto, UpdatePagoEstadoDto } from "../dtos/pago.dto";
-import { MercadoPagoProvider } from "../../infra/providers/mercadopago";
+import { PayPalProvider } from "../../infra/providers/paypal";
 
 export class PagoService {
   constructor(private readonly repo: IPagoRepository) {}
@@ -11,34 +11,28 @@ export class PagoService {
     const pago = new Pago(
       crypto.randomUUID(),
       data.reserva_id,
-      data.metodo ?? "mercado_pago",
+      data.metodo ?? "paypal",
       data.monto,
-      data.moneda ?? "ARS",
+      data.moneda ?? "USD",
       "pendiente"
     );
 
     const saved = await this.repo.create(pago);
 
-    const pref = await MercadoPagoProvider.createPreference({
+    const order = await PayPalProvider.createOrder({
       external_reference: saved.id,
-      items: [
-        {
-          title: data.descripcion || "Pago de reserva",
-          description: data.descripcion,
-          quantity: 1,
-          currency_id: saved.moneda,
-          unit_price: Number(saved.monto),
-        },
-      ],
+      amount: Number(saved.monto),
+      currency: saved.moneda,
+      description: data.descripcion || "Pago de reserva",
       back_urls: data.back_urls,
     });
 
-    // Store preference id as proveedor_tx_id to track
+    // Store order id as proveedor_tx_id to track
     const updated = await this.repo.update(saved.id, {
-      proveedor_tx_id: pref.id,
+      proveedor_tx_id: order.id,
     });
 
-    return { pago: updated, mp: pref };
+    return { pago: updated, paypal: order };
   }
 
   async getById(id: string) {
@@ -53,19 +47,21 @@ export class PagoService {
     return this.repo.update(id, partial as Partial<Pago>);
   }
 
-  // Used by webhook: map MP payment status to our domain estado
-  mapMpStatusToEstado(mpStatus: string): string {
+  // Used by webhook: map PayPal payment status to our domain estado
+  mapPaypalStatusToEstado(ppStatus: string): string {
+    const normalized = ppStatus?.toUpperCase?.() ?? ppStatus;
     const map: Record<string, string> = {
-      approved: "aprobado",
-      pending: "pendiente",
-      rejected: "rechazado",
-      refunded: "reembolsado",
-      cancelled: "cancelado",
-      in_process: "en_proceso",
-      in_mediation: "en_disputa",
-      charged_back: "chargeback",
+      COMPLETED: "aprobado",
+      APPROVED: "pendiente",
+      CREATED: "pendiente",
+      SAVED: "pendiente",
+      VOIDED: "cancelado",
+      PAYER_ACTION_REQUIRED: "pendiente",
+      PENDING: "pendiente",
+      DECLINED: "rechazado",
+      REFUNDED: "reembolsado",
+      PARTIALLY_REFUNDED: "reembolsado",
     };
-    return map[mpStatus] ?? mpStatus;
+    return map[normalized] ?? normalized.toLowerCase?.() ?? normalized;
   }
 }
-

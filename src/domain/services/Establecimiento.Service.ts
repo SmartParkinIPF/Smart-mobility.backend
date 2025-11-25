@@ -56,6 +56,10 @@ export class EstablecimientoService {
     return this.repo.list();
   }
 
+  async listWithParkings() {
+    return this.repo.listWithParkings();
+  }
+
   async listByOwner(ownerId: string) {
     return this.repo.listByOwner(ownerId);
   }

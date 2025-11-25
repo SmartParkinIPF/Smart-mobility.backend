@@ -167,6 +167,25 @@ function toDomain(r: EstRow): Establecimiento {
 export class EstablecimientoSupabaseRepository
   implements IEstablecimientoRepository
 {
+  async listWithParkings(): Promise<
+    { est: Establecimiento; parkings: { id: string; tipo: string | null }[] }[]
+  > {
+    const { data, error } = await supabaseDB
+      .from("establecimientos")
+      .select("*, estacionamientos:estacionamientos(id, tipo)")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data as any[]).map((row) => ({
+      est: toDomain(row as any),
+      parkings: Array.isArray((row as any)?.estacionamientos)
+        ? (row as any).estacionamientos.map((p: any) => ({
+            id: p.id,
+            tipo: p.tipo ?? null,
+          }))
+        : [],
+    }));
+  }
+
   async create(est: Establecimiento): Promise<Establecimiento> {
     const pointWkt = `POINT(${est.localizacion.longitude} ${est.localizacion.latitude})`;
 

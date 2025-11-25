@@ -14,6 +14,6 @@ export type CreateEstacionamientoDTO = {
   politica_cancelacion_id: string;
   estado?: string;
   ubicacion: LatLng;
-  perimetro_est: GeoPolygon;
+  perimetro_est: GeoPolygon | null;
 };
 

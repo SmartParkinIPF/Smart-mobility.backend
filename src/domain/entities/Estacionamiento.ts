@@ -15,7 +15,7 @@ export class Estacionamiento {
     public politica_cancelacion_id: string,
     public estado: string,
     public ubicacion: LatLng,
-    public perimetro_est: GeoPolygon,
+    public perimetro_est: GeoPolygon | null,
     public created_at: Date = new Date(),
     public updated_at: Date = new Date()
   ) {}

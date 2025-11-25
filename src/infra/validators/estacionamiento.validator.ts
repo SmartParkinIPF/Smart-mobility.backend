@@ -18,7 +18,7 @@ export const createEstacionamientoSchema = z.object({
   politica_cancelacion_id: z.string().uuid(),
   estado: z.string().optional().default("activo"),
   ubicacion: geoPointSchema,
-  perimetro_est: geoPolygonSchema,
+  perimetro_est: geoPolygonSchema.nullable().optional().default(null),
 });
 
 export const updateEstacionamientoSchema = z.object({
@@ -34,5 +34,5 @@ export const updateEstacionamientoSchema = z.object({
   politica_cancelacion_id: z.string().uuid().optional(),
   estado: z.string().optional(),
   ubicacion: geoPointSchema.optional(),
-  perimetro_est: geoPolygonSchema.optional(),
+  perimetro_est: geoPolygonSchema.nullable().optional(),
 });

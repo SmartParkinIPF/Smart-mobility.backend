@@ -114,19 +114,22 @@ export class EstacionamientoSupabaseRepository
 {
   async create(park: Estacionamiento): Promise<Estacionamiento> {
     const points = park.perimetro_est ?? [];
-    if (points.length < 4) {
-      throw new Error("El perímetro debe tener al menos 4 puntos");
-    }
-    const first = points[0];
-    const last = points[points.length - 1];
-
-    const closed =
-      first.latitude === last.latitude && first.longitude === last.longitude
-        ? points
-        : [...points, first];
-
-    const coords = closed.map((p) => `${p.longitude} ${p.latitude}`).join(", ");
-    const polygonWkt = `POLYGON((${coords}))`;
+    const polygonWkt =
+      points.length >= 3
+        ? (() => {
+            const first = points[0];
+            const last = points[points.length - 1];
+            const closed =
+              first.latitude === last.latitude &&
+              first.longitude === last.longitude
+                ? points
+                : [...points, first];
+            const coords = closed
+              .map((p) => `${p.longitude} ${p.latitude}`)
+              .join(", ");
+            return `POLYGON((${coords}))`;
+          })()
+        : null;
 
     const pointWkt = `POINT(${park.ubicacion.longitude} ${park.ubicacion.latitude})`;
 
@@ -243,18 +246,22 @@ export class EstacionamientoSupabaseRepository
     if (partial.estado !== undefined) payload.estado = partial.estado;
     if (partial.ubicacion)
       payload.ubicacion = `POINT(${partial.ubicacion.longitude} ${partial.ubicacion.latitude})`;
-    if (partial.perimetro_est && partial.perimetro_est.length >= 4) {
+    if (partial.perimetro_est) {
       const pts = partial.perimetro_est;
-      const first = pts[0];
-      const last = pts[pts.length - 1];
-      const closed =
-        first.latitude === last.latitude && first.longitude === last.longitude
-          ? pts
-          : [...pts, first];
-      const coords = closed
-        .map((p) => `${p.longitude} ${p.latitude}`)
-        .join(", ");
-      payload.perimetro_est = `POLYGON((${coords}))`;
+      if (pts.length >= 3) {
+        const first = pts[0];
+        const last = pts[pts.length - 1];
+        const closed =
+          first.latitude === last.latitude && first.longitude === last.longitude
+            ? pts
+            : [...pts, first];
+        const coords = closed
+          .map((p) => `${p.longitude} ${p.latitude}`)
+          .join(", ");
+        payload.perimetro_est = `POLYGON((${coords}))`;
+      }
+    } else if (partial.perimetro_est === null) {
+      payload.perimetro_est = null;
     }
     payload.updated_at = new Date().toISOString();
 

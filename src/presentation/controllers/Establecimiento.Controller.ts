@@ -14,9 +14,11 @@ type PublicMarker = {
   title: string;
   description: string | null;
   category: string;
+  tipo?: string | null;
   coordinates: LatLngLiteral;
   pinColor: string;
   createdAt: string | null;
+  perimetro?: unknown;
 };
 
 const toSearchableText = (value: unknown) =>
@@ -80,6 +82,58 @@ const parseLocation = (raw: any): LatLngLiteral | null => {
   return null;
 };
 
+const deriveCategory = (
+  estado: unknown
+): { category: string; pinColor: string } => {
+  const normalized = (estado ?? "")
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  if (!normalized) {
+    return { category: "unavailable", pinColor: "gray" };
+  }
+
+  // Categor�a pedida: libre vs estacionable (fallback al esquema anterior)
+  if (normalized.includes("libre") || normalized === "available") {
+    return { category: "libre", pinColor: "green" };
+  }
+  if (normalized.includes("estacionable")) {
+    return { category: "estacionable", pinColor: "#2563eb" };
+  }
+  if (normalized.includes("inactivo") || normalized.includes("inactive")) {
+    return { category: "unavailable", pinColor: "gray" };
+  }
+  if (normalized.includes("activo")) {
+    return { category: "available", pinColor: "green" };
+  }
+
+  // Cualquier otro estado se expone tal cual pero con color neutro
+  return { category: normalized, pinColor: "#6b7280" };
+};
+
+const deriveTipoFromParkings = (parkings: any[]): string | null => {
+  if (!Array.isArray(parkings) || !parkings.length) return null;
+  const normalize = (val: any) =>
+    (val ?? "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  const tipos = new Set(
+    parkings
+      .map((p) => normalize((p as any)?.tipo))
+      .filter(Boolean) as string[]
+  );
+  if (tipos.has("mixto")) return "mixto";
+  if (tipos.size > 1) return "mixto";
+  const [only] = Array.from(tipos);
+  return only || null;
+};
+
 export class EstablecimientoController {
   private readonly parkRepo = new EstacionamientoSupabaseRepository();
   private readonly slotRepo = new SlotsSupabaseRepository();
@@ -122,7 +176,8 @@ export class EstablecimientoController {
   ) => {
     try {
       const search = normalizeSearch(req.query.q ?? req.query.search);
-      const items = await this.service.list();
+      const itemsWithParks = await this.service.listWithParkings();
+      const items = itemsWithParks.map((it) => it.est);
       const filtered = search
         ? items.filter((est) => {
             const haystack = [
@@ -140,17 +195,29 @@ export class EstablecimientoController {
             return haystack.some((text) => text.includes(search));
           })
         : items;
+      const parksByEstId = new Map(
+        itemsWithParks.map((it) => [it.est.id, it.parkings])
+      );
       const markers = filtered.reduce<PublicMarker[]>((acc, est) => {
         const coordinates = parseLocation(est.localizacion);
         if (!coordinates) return acc;
+        const { category, pinColor } = deriveCategory(est.estado);
+        const parks = parksByEstId.get(est.id) ?? [];
+        const tipo = deriveTipoFromParkings(parks);
         acc.push({
           id: est.id,
           title: est.nombre,
           description: est.descripcion ?? null,
-          category: est.estado === "activo" ? "available" : "unavailable",
+          category,
+          tipo,
           coordinates,
-          pinColor: est.estado === "activo" ? "green" : "gray",
+          pinColor,
           createdAt: est.created_at?.toISOString?.() ?? null,
+          perimetro:
+            (est as any).perimetro ??
+            (est as any).perimetro_est ??
+            (est as any).perimeter ??
+            null,
         });
         return acc;
       }, []);

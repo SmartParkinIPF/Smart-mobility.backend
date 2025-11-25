@@ -28,7 +28,7 @@ export class EstacionamientoService {
       data.politica_cancelacion_id,
       data.estado || "activo",
       data.ubicacion,
-      data.perimetro_est
+      data.perimetro_est ?? null
     );
     return this.repo.create(est);
   }

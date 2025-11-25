@@ -49,6 +49,7 @@ export class PoliticaCancelacionController {
       if (!authUser) throw new AppError("No autenticado", 401);
       const paramId = req.params.userId;
       const requestedId = (paramId ?? authUser.id)?.toString();
+      console.log("awdaawd", requestedId);
       if (!requestedId) throw new AppError("Usuario inválido", 400);
       const isSameUser = authUser.id?.toString() === requestedId;
       if (!isSameUser && !this.isAdmin(authUser)) {

@@ -8,23 +8,56 @@ export class PagoService {
   constructor(private readonly repo: IPagoRepository) {}
 
   async createIntent(data: CreatePagoDto) {
-    const pago = new Pago(
-      crypto.randomUUID(),
-      data.reserva_id,
-      data.metodo ?? "paypal",
-      data.monto,
-      data.moneda ?? "USD",
-      "pendiente"
+    // Algunos entornos tienen enum limitado para metodo; probamos caídas de respaldo.
+    const metodoCandidates = Array.from(
+      new Set([
+        data.metodo ?? "paypal",
+        "mercadopago",
+        "mp",
+        "online",
+        "tarjeta",
+        "efectivo",
+      ])
     );
 
-    const saved = await this.repo.create(pago);
+    let saved: Pago | null = null;
+    let lastErr: any = null;
+    for (const metodo of metodoCandidates) {
+      try {
+        const pago = new Pago(
+          crypto.randomUUID(),
+          data.reserva_id,
+          metodo,
+          data.monto,
+          data.moneda ?? "USD",
+          "pendiente"
+        );
+        saved = await this.repo.create(pago);
+        break;
+      } catch (err: any) {
+        lastErr = err;
+        const code = (err as any)?.code || (err as any)?.message;
+        if (code && String(code).includes("22P02")) {
+          // enum invalido: probar siguiente candidato
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!saved) throw lastErr || new Error("No se pudo crear el pago");
 
     const order = await PayPalProvider.createOrder({
       external_reference: saved.id,
       amount: Number(saved.monto),
       currency: saved.moneda,
       description: data.descripcion || "Pago de reserva",
-      back_urls: data.back_urls,
+      back_urls:
+        data.back_urls ?? {
+          success: "https://smartparking.com/pago/success",
+          pending: "https://smartparking.com/pago/pending",
+          failure: "https://smartparking.com/pago/failure",
+        },
     });
 
     // Store order id as proveedor_tx_id to track

@@ -5,11 +5,14 @@ import { AppError } from "../../core/errors/AppError";
 import { PayPalProvider } from "../../infra/providers/paypal";
 import { ReservaService } from "../../domain/services/Reserva.Service";
 import { ReservasSupabaseRepository } from "../../infra/repositories/ReservaRepository";
+import { SlotsService } from "../../domain/services/Slots.Service";
+import { SlotsSupabaseRepository } from "../../infra/repositories/SlotsRepository";
 import { PagosSupabaseRepository } from "../../infra/repositories/PagoRepository";
 
 export class PagosController {
   private reservaService = new ReservaService(new ReservasSupabaseRepository());
   private pagoRepo = new PagosSupabaseRepository();
+  private slotService = new SlotsService(new SlotsSupabaseRepository());
   constructor(private readonly service: PagoService) {}
 
   createIntent = async (req: Request, res: Response, next: NextFunction) => {
@@ -91,7 +94,10 @@ export class PagosController {
         try {
           const pago = await this.service.getById(pagoId);
           if (pago?.reserva_id) {
-            await this.reservaService.update(pago.reserva_id, { estado: "reservada" });
+            const updatedReserva = await this.reservaService.update(pago.reserva_id, { estado: "reservada" });
+            if (updatedReserva?.slot_id) {
+              await this.slotService.update(updatedReserva.slot_id, { estado_operativo: "reservado" } as any);
+            }
           }
         } catch (err) {
           // no interrumpimos el webhook si falla la actualización de reserva
@@ -118,7 +124,10 @@ export class PagosController {
     try {
       const result = await this.service.captureAndUpdateByOrderId(orderId);
       if (result?.pago?.reserva_id) {
-        await this.reservaService.update(result.pago.reserva_id, { estado: "reservada" });
+        const reserva = await this.reservaService.update(result.pago.reserva_id, { estado: "reservada" });
+        if (reserva?.slot_id) {
+          await this.slotService.update(reserva.slot_id, { estado_operativo: "reservado" } as any);
+        }
       }
       const html = this.htmlReturn(
         "Pago completado",

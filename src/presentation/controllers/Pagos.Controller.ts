@@ -5,9 +5,11 @@ import { AppError } from "../../core/errors/AppError";
 import { PayPalProvider } from "../../infra/providers/paypal";
 import { ReservaService } from "../../domain/services/Reserva.Service";
 import { ReservasSupabaseRepository } from "../../infra/repositories/ReservaRepository";
+import { PagosSupabaseRepository } from "../../infra/repositories/PagoRepository";
 
 export class PagosController {
   private reservaService = new ReservaService(new ReservasSupabaseRepository());
+  private pagoRepo = new PagosSupabaseRepository();
   constructor(private readonly service: PagoService) {}
 
   createIntent = async (req: Request, res: Response, next: NextFunction) => {
@@ -108,5 +110,54 @@ export class PagosController {
       return new AppError("Validación fallida", 400, (err as any).issues);
     return err as any;
   }
-}
 
+  // Manejo de return de PayPal (captura orden y actualiza reserva)
+  returnSuccess = async (req: Request, res: Response) => {
+    const orderId = (req.query.token as string) || (req.query.orderId as string);
+    if (!orderId) return res.status(400).send("Falta token de pago");
+    try {
+      const result = await this.service.captureAndUpdateByOrderId(orderId);
+      if (result?.pago?.reserva_id) {
+        await this.reservaService.update(result.pago.reserva_id, { estado: "reservada" });
+      }
+      const html = this.htmlReturn(
+        "Pago completado",
+        "Pago capturado con éxito. Ya podés volver a la app."
+      );
+      return res.status(200).send(html);
+    } catch (e: any) {
+      const html = this.htmlReturn(
+        "Pago completado",
+        "Pago aprobado, pero hubo un problema al confirmar la reserva. Revisa el estado en la app."
+      );
+      return res.status(200).send(html);
+    }
+  };
+
+  returnPending = (_req: Request, res: Response) => {
+    const html = this.htmlReturn("Pago pendiente", "Tu pago quedó pendiente o en revisión.");
+    return res.status(200).send(html);
+  };
+
+  returnFailure = (_req: Request, res: Response) => {
+    const html = this.htmlReturn("Pago cancelado", "El pago fue cancelado o falló.");
+    return res.status(200).send(html);
+  };
+
+  private htmlReturn(title: string, message: string) {
+    return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+body { font-family: Arial, sans-serif; background:#0b1220; color:#e5e7eb; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:16px; }
+.box { background:#111827; padding:24px 20px; border-radius:14px; border:1px solid #1f2937; max-width:420px; text-align:center; }
+h1 { margin:0 0 12px; font-size:22px; }
+p { margin:6px 0; line-height:1.5; color:#cbd5e1; }
+.hint { font-size:14px; color:#94a3b8; }
+</style></head><body><div class="box">
+<h1>${title}</h1>
+<p>${message}</p>
+<p class="hint">Ya podés volver a la app para ver el estado actualizado.</p>
+</div></body></html>`;
+  }
+}

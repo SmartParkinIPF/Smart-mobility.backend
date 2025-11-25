@@ -49,11 +49,11 @@ export class PagoService {
     if (!saved) throw lastErr || new Error("No se pudo crear el pago");
 
     const fallbackSuccess =
-      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/pay/return/success`;
+      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/api/pagos/return/success`;
     const fallbackPending =
-      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/pay/return/pending`;
+      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/api/pagos/return/pending`;
     const fallbackFailure =
-      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/pay/return/failure`;
+      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/api/pagos/return/failure`;
 
     const order = await PayPalProvider.createOrder({
       external_reference: saved.id,
@@ -86,6 +86,30 @@ export class PagoService {
 
   async updateEstado(id: string, partial: UpdatePagoEstadoDto) {
     return this.repo.update(id, partial as Partial<Pago>);
+  }
+
+  async captureAndUpdateByOrderId(orderId: string) {
+    const capture = await PayPalProvider.captureOrder(orderId);
+    const ppStatus: string =
+      (capture?.status as string | undefined) ||
+      (capture?.purchase_units?.[0]?.payments?.captures?.[0]?.status as string | undefined) ||
+      "COMPLETED";
+    const estado = this.mapPaypalStatusToEstado(ppStatus);
+    const reciboUrl: string | null =
+      Array.isArray(capture?.links) && capture.links.length > 0
+        ? capture.links.find((l: any) => l.rel === "self")?.href || null
+        : null;
+
+    const pago = await this.repo.findByProveedorTxId(orderId);
+    let updated: Pago | null = null;
+    if (pago) {
+      updated = await this.repo.update(pago.id, {
+        estado,
+        proveedor_tx_id: orderId,
+        recibo_url: reciboUrl,
+      });
+    }
+    return { pago: updated, estado, capture };
   }
 
   // Used by webhook: map PayPal payment status to our domain estado

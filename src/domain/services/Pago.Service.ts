@@ -3,6 +3,7 @@ import { IPagoRepository } from "../repositories/iPagoRepository";
 import { Pago } from "../entities/Pago";
 import { CreatePagoDto, UpdatePagoEstadoDto } from "../dtos/pago.dto";
 import { PayPalProvider } from "../../infra/providers/paypal";
+import { ENV } from "../../config/env";
 
 export class PagoService {
   constructor(private readonly repo: IPagoRepository) {}
@@ -47,6 +48,13 @@ export class PagoService {
 
     if (!saved) throw lastErr || new Error("No se pudo crear el pago");
 
+    const fallbackSuccess =
+      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/pay/return/success`;
+    const fallbackPending =
+      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/pay/return/pending`;
+    const fallbackFailure =
+      `${ENV.PUBLIC_BASE_URL || `http://localhost:${ENV.PORT}`}/pay/return/failure`;
+
     const order = await PayPalProvider.createOrder({
       external_reference: saved.id,
       amount: Number(saved.monto),
@@ -54,9 +62,9 @@ export class PagoService {
       description: data.descripcion || "Pago de reserva",
       back_urls:
         data.back_urls ?? {
-          success: "https://smartparking.com/pago/success",
-          pending: "https://smartparking.com/pago/pending",
-          failure: "https://smartparking.com/pago/failure",
+          success: fallbackSuccess,
+          pending: fallbackPending,
+          failure: fallbackFailure,
         },
     });
 

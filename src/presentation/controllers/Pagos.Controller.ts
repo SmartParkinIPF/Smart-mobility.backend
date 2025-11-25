@@ -3,8 +3,11 @@ import { PagoService } from "../../domain/services/Pago.Service";
 import { createPagoSchema } from "../../infra/validators/pago.validator";
 import { AppError } from "../../core/errors/AppError";
 import { PayPalProvider } from "../../infra/providers/paypal";
+import { ReservaService } from "../../domain/services/Reserva.Service";
+import { ReservasSupabaseRepository } from "../../infra/repositories/ReservaRepository";
 
 export class PagosController {
+  private reservaService = new ReservaService(new ReservasSupabaseRepository());
   constructor(private readonly service: PagoService) {}
 
   createIntent = async (req: Request, res: Response, next: NextFunction) => {
@@ -79,6 +82,20 @@ export class PagosController {
         proveedor_tx_id: (resource.id as string | undefined) || relatedOrderId || null,
         recibo_url: reciboUrl,
       });
+
+      // Si el pago quedó aprobado, intentamos marcar la reserva como "reservada"
+      const newEstado = this.service.mapPaypalStatusToEstado(paypalStatus);
+      if (newEstado === "aprobado") {
+        try {
+          const pago = await this.service.getById(pagoId);
+          if (pago?.reserva_id) {
+            await this.reservaService.update(pago.reserva_id, { estado: "reservada" });
+          }
+        } catch (err) {
+          // no interrumpimos el webhook si falla la actualización de reserva
+          console.error("No se pudo actualizar reserva tras pago", err);
+        }
+      }
 
       res.status(200).json({ ok: true });
     } catch (err) {

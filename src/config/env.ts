@@ -13,6 +13,7 @@ export const ENV = {
   SERVICE_ROL:
     process.env.SUPABASE_SERVICE_ROL ||
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5ZHF4Ynp3dGZhaXFjbHFveGRsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjgzMjc5NSwiZXhwIjoyMDcyNDA4Nzk1fQ.AWdy8t7MyyDv3PN2Nyt2NBw0LbRzj_DutYUgIJ_a7dQ",
+  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || "",
   PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID || "",
   PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET || "",
   PAYPAL_API_BASE:

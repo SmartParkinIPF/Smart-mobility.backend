@@ -18,6 +18,7 @@ import adminUsers from "./admin.users.routes";
 import agentRoutes from "./Agent.routes";
 import providerEncargados from "./provider.encargados.routes";
 import alertas from "./alertas.routes";
+import notificaciones from "./notificaciones.routes";
 
 const router = Router();
 router.use("/auth", auth);
@@ -39,4 +40,5 @@ router.use("/admin/users", adminUsers);
 router.use(agentRoutes);
 router.use("/provider", providerEncargados);
 router.use(alertas);
+router.use(notificaciones);
 export default router;

@@ -8,8 +8,14 @@ import { ISlotsRepository } from "../repositories/ISlotsRepository";
 import { IEstacionamientoRepository } from "../repositories/iEstacionamientoRepository";
 import { IUserRepository } from "../repositories/IUserRepository";
 import { Slots } from "../entities/Slots";
+import { NotificacionService } from "./Notificacion.Service";
+import { NotificacionSupabaseRepository } from "../../infra/repositories/NotificacionRepository";
 
 export class AlertaService {
+  private readonly notificaciones = new NotificacionService(
+    new NotificacionSupabaseRepository()
+  );
+
   constructor(
     private readonly alertas: IAlertaRepository,
     private readonly slots: ISlotsRepository,
@@ -114,6 +120,16 @@ export class AlertaService {
     } catch {
       // ignorar fallo de actualizacion de slot
     }
+
+    // Crear notificacion para el usuario que reporto
+    await this.notificaciones.crear({
+      user_id: alerta.reporter_user_id,
+      titulo: "Tu plaza fue recuperada",
+      mensaje:
+        "Tu problema fue resuelto y tu espacio quedó reservado nuevamente. Disculpas por los inconvenientes.",
+      estado: "nueva",
+    });
+
     return updated;
   }
 }

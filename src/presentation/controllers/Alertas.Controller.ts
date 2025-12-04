@@ -25,12 +25,22 @@ function broadcast(establecimientoId: string, payload: any) {
 }
 
 export class AlertasController {
+  private slotRepo = new SlotsSupabaseRepository();
   private service = new AlertaService(
     new AlertasRepository(),
     new SlotsSupabaseRepository(),
     new EstacionamientoSupabaseRepository(),
     new UsersRepository()
   );
+
+  private async withSlotCodigo(alerta: any) {
+    try {
+      const slot = await this.slotRepo.findById(alerta.slot_id);
+      return { ...alerta, slot_codigo: (slot as any)?.codigo ?? null };
+    } catch {
+      return alerta;
+    }
+  }
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -39,10 +49,11 @@ export class AlertasController {
       const { slot_id, mensaje } = req.body || {};
       if (!slot_id || typeof slot_id !== "string")
         throw new AppError("slot_id requerido", 400);
-      const alerta = await this.service.crear(user.id, {
+      const alertaRaw = await this.service.crear(user.id, {
         slot_id,
         mensaje: mensaje ?? null,
       });
+      const alerta = await this.withSlotCodigo(alertaRaw);
       broadcast(alerta.establecimiento_id, { type: "created", alerta });
       res.status(201).json(alerta);
     } catch (err) {
@@ -60,7 +71,8 @@ export class AlertasController {
       if (!user?.id) throw new AppError("No autenticado", 401);
       const estado = (req.query.estado as string) || undefined;
       const alertas = await this.service.listarPorEncargado(user.id, estado);
-      res.status(200).json(alertas);
+      const enriched = await Promise.all(alertas.map((a) => this.withSlotCodigo(a)));
+      res.status(200).json(enriched);
     } catch (err) {
       next(err);
     }
@@ -71,7 +83,8 @@ export class AlertasController {
       const user = (req as any).authUser;
       if (!user?.id) throw new AppError("No autenticado", 401);
       const { id } = req.params;
-      const alerta = await this.service.marcarLeida(user.id, id);
+      const alertaRaw = await this.service.marcarLeida(user.id, id);
+      const alerta = await this.withSlotCodigo(alertaRaw);
       broadcast(alerta.establecimiento_id, { type: "updated", alerta });
       res.status(200).json(alerta);
     } catch (err) {
@@ -87,7 +100,8 @@ export class AlertasController {
       const { estado } = req.body || {};
       if (!estado || typeof estado !== "string")
         throw new AppError("estado requerido", 400);
-      const alerta = await this.service.actualizarEstado(user.id, id, estado);
+      const alertaRaw = await this.service.actualizarEstado(user.id, id, estado);
+      const alerta = await this.withSlotCodigo(alertaRaw);
       broadcast(alerta.establecimiento_id, { type: "updated", alerta });
       res.status(200).json(alerta);
     } catch (err) {
@@ -136,7 +150,8 @@ export class AlertasController {
       const user = (req as any).authUser;
       if (!user?.id) throw new AppError("No autenticado", 401);
       const { id } = req.params;
-      const alerta = await this.service.resolver(user.id, id);
+      const alertaRaw = await this.service.resolver(user.id, id);
+      const alerta = await this.withSlotCodigo(alertaRaw);
       broadcast(alerta.establecimiento_id, { type: "updated", alerta });
       res.status(200).json(alerta);
     } catch (err) {

@@ -131,13 +131,13 @@ export class PagosController {
       }
       const html = this.htmlReturn(
         "Pago completado",
-        "Pago capturado con éxito. Ya podés volver a la app."
+        "Pago completado. Por favor vuelve a la aplicacion para ver tu reserva."
       );
       return res.status(200).send(html);
     } catch (e: any) {
       const html = this.htmlReturn(
         "Pago completado",
-        "Pago aprobado, pero hubo un problema al confirmar la reserva. Revisa el estado en la app."
+        "Pago completado. Por favor vuelve a la aplicacion para ver tu reserva."
       );
       return res.status(200).send(html);
     }
@@ -166,7 +166,7 @@ p { margin:6px 0; line-height:1.5; color:#cbd5e1; }
 </style></head><body><div class="box">
 <h1>${title}</h1>
 <p>${message}</p>
-<p class="hint">Ya podés volver a la app para ver el estado actualizado.</p>
+<p class="hint">Por favor vuelve a la aplicacion para ver tu reserva.</p>
 </div></body></html>`;
   }
 }

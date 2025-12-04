@@ -14,9 +14,10 @@ import opiniones from "./opiniones.routes";
 import adminEstablecimientos from "./admin.establecimientos.routes";
 import adminEstacionamientos from "./admin.estacionamientos.routes";
 import adminUsers from "./admin.users.routes";
-//Luca agregó esto
+//Luca agregИ esto
 import agentRoutes from "./Agent.routes";
 import providerEncargados from "./provider.encargados.routes";
+import alertas from "./alertas.routes";
 
 const router = Router();
 router.use("/auth", auth);
@@ -34,7 +35,8 @@ router.use("/opiniones", opiniones);
 router.use("/admin/establecimientos", adminEstablecimientos);
 router.use("/admin/estacionamientos", adminEstacionamientos);
 router.use("/admin/users", adminUsers);
-// Luca agregó esta parte
+// Luca agregИ esta parte
 router.use(agentRoutes);
 router.use("/provider", providerEncargados);
+router.use(alertas);
 export default router;

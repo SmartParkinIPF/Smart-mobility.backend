@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const rolSchema = z.enum(["admin", "user", "provider"]);
+export const rolSchema = z.enum(["admin", "user", "provider", "encargado"]);
 
 export const registerSchema = z
   .object({

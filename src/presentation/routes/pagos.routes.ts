@@ -12,11 +12,16 @@ const jwt = new ValidatorJwt();
 // Crear intención de pago con PayPal (crea registro en 'pagos')
 router.post("/", jwt.validateJwt, controller.createIntent);
 
-// Consultar pago por id
-router.get("/:id", jwt.validateJwt, controller.getById);
+// Retornos de PayPal (captura y muestra página)
+router.get("/return/success", controller.returnSuccess);
+router.get("/return/pending", controller.returnPending);
+router.get("/return/failure", controller.returnFailure);
 
 // Listar pagos por reserva
 router.get("/reserva/:reservaId", jwt.validateJwt, controller.listByReserva);
+
+// Consultar pago por id
+router.get("/:id", jwt.validateJwt, controller.getById);
 
 // Webhook PayPal (sin auth)
 router.post("/webhook", controller.webhook);

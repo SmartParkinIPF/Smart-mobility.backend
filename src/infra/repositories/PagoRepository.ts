@@ -69,6 +69,17 @@ export class PagosSupabaseRepository implements IPagoRepository {
     return (data as PagoRow[]).map(toDomain);
   }
 
+  async findByProveedorTxId(orderId: string): Promise<Pago | null> {
+    const { data, error } = await supabaseDB
+      .from("pagos")
+      .select("*")
+      .eq("proveedor_tx_id", orderId)
+      .maybeSingle();
+    if (error && (error as any)?.code !== "PGRST116") throw error;
+    if (!data) return null;
+    return toDomain(data as PagoRow);
+  }
+
   async update(id: string, partial: Partial<Pago>): Promise<Pago> {
     const payload: any = {};
     if (partial.metodo !== undefined) payload.metodo = partial.metodo;

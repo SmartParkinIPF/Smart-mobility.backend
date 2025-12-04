@@ -16,6 +16,7 @@ import adminEstacionamientos from "./admin.estacionamientos.routes";
 import adminUsers from "./admin.users.routes";
 //Luca agregó esto
 import agentRoutes from "./Agent.routes";
+import providerEncargados from "./provider.encargados.routes";
 
 const router = Router();
 router.use("/auth", auth);
@@ -35,4 +36,5 @@ router.use("/admin/estacionamientos", adminEstacionamientos);
 router.use("/admin/users", adminUsers);
 // Luca agregó esta parte
 router.use(agentRoutes);
+router.use("/provider", providerEncargados);
 export default router;

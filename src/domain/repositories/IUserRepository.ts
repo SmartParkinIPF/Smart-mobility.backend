@@ -11,5 +11,13 @@ export interface IUserRepository {
   list(): Promise<User[]>;
   updateProfile(userId: string, patch: UpdateUserProfileInput): Promise<User>;
   updateRole(targetUserId: string, role: Rol): Promise<void>;
+  updateRoleAndEstablecimiento(
+    targetUserId: string,
+    role: Rol,
+    establecimientoId: string | null
+  ): Promise<void>;
+  findEncargadoByEstablecimiento(
+    establecimientoId: string
+  ): Promise<User | null>;
   delete(userId: string): Promise<void>;
 }

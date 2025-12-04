@@ -7,6 +7,7 @@ export class User {
     public phone: number,
     public email: string,
     public role: Rol,
+    public establecimiento_id: string | null = null,
     public createdAt: Date = new Date()
   ) {}
 }

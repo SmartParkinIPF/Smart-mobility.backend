@@ -8,9 +8,12 @@ import {
 import { AppError } from "../../core/errors/AppError";
 import { PagoService } from "../../domain/services/Pago.Service";
 import { PagosSupabaseRepository } from "../../infra/repositories/PagoRepository";
+import { SlotsService } from "../../domain/services/Slots.Service";
+import { SlotsSupabaseRepository } from "../../infra/repositories/SlotsRepository";
 
 export class ReservasController {
   private pagoService = new PagoService(new PagosSupabaseRepository());
+  private slotService = new SlotsService(new SlotsSupabaseRepository());
   constructor(private readonly service: ReservaService) {}
 
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -63,6 +66,10 @@ export class ReservasController {
       const { id } = req.params;
       const { slot_id } = confirmReservaSchema.parse(req.body ?? {});
       const updated = await this.service.confirmar(id, slot_id);
+      if (updated?.slot_id) {
+        // Marcar slot como reservado
+        await this.slotService.update(updated.slot_id, { estado_operativo: "reservado" } as any);
+      }
       res.status(200).json(updated);
     } catch (err) {
       next(this.toAppError(err));
@@ -73,6 +80,10 @@ export class ReservasController {
     try {
       const { id } = req.params;
       const updated = await this.service.cancelar(id);
+      if (updated?.slot_id) {
+        // Liberar slot al cancelar
+        await this.slotService.update(updated.slot_id, { estado_operativo: "operativo" } as any);
+      }
       res.status(200).json(updated);
     } catch (err) {
       next(this.toAppError(err));

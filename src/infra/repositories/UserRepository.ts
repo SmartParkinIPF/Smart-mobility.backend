@@ -13,6 +13,7 @@ interface UserRow {
   phone: number | null;
   email: string;
   role: Rol;
+  establecimiento_id: string | null;
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ function toDomain(row: UserRow): User {
     Number(row.phone ?? 0),
     row.email,
     row.role,
+    row.establecimiento_id ?? null,
     new Date(row.created_at)
   );
 }
@@ -147,6 +149,40 @@ export class UsersRepository implements IUserRepository {
     if (error) throw error;
     if (!data)
       throw new Error("No se actualizo ningun usuario (id inexistente)");
+  }
+
+  async updateRoleAndEstablecimiento(
+    targetUserId: string,
+    role: Rol,
+    establecimientoId: string | null
+  ): Promise<void> {
+    const { data, error } = await supabaseDB
+      .from("usuarios")
+      .update({ role, establecimiento_id: establecimientoId })
+      .eq("id", targetUserId)
+      .select("id, role, establecimiento_id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data)
+      throw new Error("No se actualizo ningun usuario (id inexistente)");
+  }
+
+  async findEncargadoByEstablecimiento(
+    establecimientoId: string
+  ): Promise<User | null> {
+    const { data, error } = await supabaseDB
+      .from("usuarios")
+      .select("*")
+      .eq("establecimiento_id", establecimientoId)
+      .eq("role", "encargado")
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return toDomain(data as UserRow);
   }
 
   async delete(userId: string): Promise<void> {

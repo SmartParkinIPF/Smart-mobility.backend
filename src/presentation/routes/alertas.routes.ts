@@ -37,4 +37,11 @@ router.patch(
   controller.updateEstado
 );
 
+// Resolver (marcar atendida + devolver slot a reservado)
+router.patch(
+  "/encargado/alertas/:id/resolver",
+  JwtValidator.validateJwt,
+  controller.resolver
+);
+
 export default router;

@@ -130,4 +130,17 @@ export class AlertasController {
       next(err);
     }
   };
+
+  resolver = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).authUser;
+      if (!user?.id) throw new AppError("No autenticado", 401);
+      const { id } = req.params;
+      const alerta = await this.service.resolver(user.id, id);
+      broadcast(alerta.establecimiento_id, { type: "updated", alerta });
+      res.status(200).json(alerta);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

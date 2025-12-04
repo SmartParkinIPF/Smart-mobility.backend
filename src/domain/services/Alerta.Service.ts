@@ -100,4 +100,20 @@ export class AlertaService {
     await this.assertOwnership(encargadoId, alertaId);
     return this.alertas.updateEstado(alertaId, estado);
   }
+
+  async resolver(
+    encargadoId: string,
+    alertaId: string
+  ): Promise<Alerta> {
+    const alerta = await this.assertOwnership(encargadoId, alertaId);
+    // Marcar atendido
+    const updated = await this.alertas.updateEstado(alertaId, "atendido");
+    // Dejar slot en reservado nuevamente (best-effort)
+    try {
+      await this.slots.update(alerta.slot_id, { estado_operativo: "reservado" } as any);
+    } catch {
+      // ignorar fallo de actualizacion de slot
+    }
+    return updated;
+  }
 }

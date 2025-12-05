@@ -87,28 +87,27 @@ export class SlotsSupabaseRepository implements ISlotsRepository {
   }
 
   async listByEstablecimiento(establecimientoId: string): Promise<Slots[]> {
-    // Usamos la selección con la relación a la tabla estacionamientos y filtramos por el campo establecimiento_id
+    // Paso 1: obtener los estacionamientos del establecimiento
+    const { data: estacionamientos, error: estError } = await supabaseDB
+      .from("estacionamientos")
+      .select("id")
+      .eq("establecimiento_id", establecimientoId);
+    if (estError) throw estError;
+    const ids = (estacionamientos ?? [])
+      .map((e: any) => e.id)
+      .filter(Boolean);
+    if (!ids.length) return [];
+console.log("ides",estacionamientos)
+    // Paso 2: traer slots cuyo estacionamiento_id esté en los IDs obtenidos
     const { data, error } = await supabaseDB
       .from("slots")
-      .select("*, estacionamientos(*)")
-      .eq("estacionamientos.establecimiento_id", establecimientoId);
+      .select(
+        "id, estacionamiento_id, codigo, tipo, ancho_cm, largo_cm, ubicacion_local, estado_operativo, tarifa_id, es_reservable, created_at, updated_at"
+      )
+      .in("estacionamiento_id", ids);
     if (error) throw error;
-    // La respuesta incluye un objeto 'estacionamientos' embebido; extraemos solo los campos de slot
-    const rows = (data as any[]).map((r) => ({
-      id: r.id,
-      estacionamiento_id: r.estacionamiento_id,
-      codigo: r.codigo,
-      tipo: r.tipo,
-      ancho_cm: r.ancho_cm,
-      largo_cm: r.largo_cm,
-      ubicacion_local: r.ubicacion_local,
-      estado_operativo: r.estado_operativo,
-      tarifa_id: r.tarifa_id,
-      es_reservable: r.es_reservable,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-    })) as SlotRow[];
-    return rows.map(toDomain);
+
+    return (data as SlotRow[]).map(toDomain);
   }
 
   async update(id: string, partial: Partial<Slots>): Promise<Slots> {

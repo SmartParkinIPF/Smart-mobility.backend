@@ -5,8 +5,11 @@ import {
   updateSlotSchema,
 } from "../../infra/validators/slots.validator";
 import { AppError } from "../../core/errors/AppError";
+import { UsersRepository } from "../../infra/repositories/UserRepository";
 
 export class SlotsController {
+  private usersRepo = new UsersRepository();
+
   constructor(private readonly service: SlotsService) {}
 
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -63,9 +66,34 @@ export class SlotsController {
     next: NextFunction
   ) => {
     try {
-      const establecimientoId = req.params.establecimientoId;
+      const authUser = (req as any)?.authUser;
+      let establecimientoId = req.params.establecimientoId;
       if (!establecimientoId)
         return res.status(400).json({ message: "Falta establecimientoId" });
+
+      // Encargados solo pueden acceder a su propio establecimiento
+      if (authUser?.role === "encargado") {
+        // authUser proviene de supabase (auth), no tiene establecimiento_id. Buscamos el perfil en la tabla usuarios.
+        const fullUser = await this.usersRepo.findById(authUser.id);
+        const assigned =
+          fullUser?.establecimiento_id ??
+          authUser.establecimiento_id ??
+          (authUser as any)?.establecimientoId ??
+          (authUser as any)?.establecimientoID;
+        if (!assigned) {
+          throw new AppError(
+            "El encargado no tiene establecimiento asignado",
+            403
+          );
+        }
+        if (assigned !== establecimientoId) {
+          throw new AppError(
+            "No puedes ver slots de otro establecimiento",
+            403
+          );
+        }
+      }
+
       const items = await this.service.listByEstablecimiento(establecimientoId);
       res.json(items);
     } catch (err) {

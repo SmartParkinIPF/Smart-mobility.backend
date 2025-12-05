@@ -291,7 +291,10 @@ export class EstablecimientoController {
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id;
-      await this.service.delete(id);
+      const requester = (req as any).authUser as
+        | { id: string; role?: string | null }
+        | undefined;
+      await this.service.delete(id, requester);
       res.status(204).send();
     } catch (err) {
       next(err);

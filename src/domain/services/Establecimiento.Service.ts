@@ -13,6 +13,12 @@ export class EstablecimientoService {
     private readonly authUsers: IAuthUserRepository
   ) {}
 
+  private normalizeRole(role: unknown) {
+    return String(role ?? "")
+      .toLowerCase()
+      .trim();
+  }
+
   async create(data: CreateEstablecimientoDTO) {
     const owner = await this.users.findById(data.ownerId);
     if (!owner) throw new AppError("Usuario propietario no encontrado", 404);
@@ -71,7 +77,25 @@ export class EstablecimientoService {
     return this.repo.update(id, partial);
   }
 
-  async delete(id: string) {
+  async delete(id: string, requester?: { id: string; role?: string | null }) {
+    const est = await this.repo.findById(id);
+    console.log("find#Est", est);
+    if (est === null) throw new AppError("Establecimiento no encontrado", 404);
+
+    if (requester) {
+      const role = this.normalizeRole(requester.role);
+      const isAdmin = role === "admin" || role === "superadmin" || role === "1";
+      const isOwner =
+        role === "provider" && est.propietario_id === requester.id;
+      if (!isAdmin && !isOwner) {
+        throw new AppError(
+          "No autorizado para eliminar este establecimiento",
+          403
+        );
+      }
+    }
+
+    console.log("llegue");
     await this.repo.delete(id);
   }
 }

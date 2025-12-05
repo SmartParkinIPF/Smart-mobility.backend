@@ -366,10 +366,16 @@ export class EstablecimientoSupabaseRepository
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabaseDB
+    const { data, error } = await supabaseDB
       .from("establecimientos")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     if (error) throw error;
+    console.log(data);
+    console.log(id);
+    if (!data) {
+      throw new Error("No se encontró el establecimiento a eliminar");
+    }
   }
 }
